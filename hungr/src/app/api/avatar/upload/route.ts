@@ -2,9 +2,11 @@ import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request): Promise<NextResponse> {
+  console.log(request);
   const { searchParams } = new URL(request.url);
+  console.log(searchParams);
   const filename = searchParams.get("filename");
-
+  console.log("body is", request.body);
   // ⚠️ The below code is for App Router Route Handlers only
   if (!filename || !request.body) {
     throw "filename and request body is required";
