@@ -50,7 +50,7 @@ async function sendImage(
   const file = inputFileRef.current.files[0];
   console.log("file", file);
   /*
-  const response = await fetch(`/api/avatar/upload?filename=${file.name}`, {
+  const response = await fetch(`/api/recipe/upload?filename=${file.name}`, {
     method: "POST",
     body: file,
   });
