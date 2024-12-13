@@ -1,6 +1,8 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+const imageBypass = true;
+const metadataBypass = false;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +18,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   const imagePromise = sendImage(filename, request.body);
   const metadataPromise = sendMetadata(filename, tagString);
-  return Promise.all([imagePromise, metadataPromise]);
+  return NextResponse.json({ imagePromise, metadataPromise });
 }
 
 // The next lines are required for Pages API Routes only
@@ -30,6 +32,9 @@ async function sendImage(
   filename: string,
   requestBody: ReadableStream<Uint8Array> | null
 ): Promise<NextResponse> {
+  if (imageBypass) {
+    return NextResponse.json(null);
+  }
   // ⚠️ The below code is for App Router Route Handlers only
   if (!requestBody) {
     throw "filename and request body is required";
@@ -68,7 +73,7 @@ async function sendMetadata(
     }
 
     // Step 2: Insert tags into 'tags' table (using upsert to avoid duplicates)
-    const tagInserts = tags.map((tag: string) => ({ name: tag }));
+    const tagInserts = tags.split(", ").map((tag: string) => ({ name: tag }));
     const { data: insertedTags, error: tagError } = await supabase
       .from("tags")
       .upsert(tagInserts, { onConflict: "name" })
@@ -97,6 +102,4 @@ async function sendMetadata(
     console.error("Error uploading recipe:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json(blob);
 }
