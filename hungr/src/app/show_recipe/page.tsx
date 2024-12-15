@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import metadata from "../../../public/metadataDB.json";
+import metadata from "../../../public/images/metadataDB.json";
 
 type Recipe = {
   Title: string;
