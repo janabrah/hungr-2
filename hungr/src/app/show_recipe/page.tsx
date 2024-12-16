@@ -26,6 +26,10 @@ export default function ShowRecipe() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [image, setImage] = useState<Blob | null>(null);
+  const [imageDims, setImageDims] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   const userId = USERID;
@@ -66,6 +70,19 @@ export default function ShowRecipe() {
       const result = await response.blob();
       console.log("Image result:", result);
       setImage(result);
+      // Create an Image object to get the original dimensions
+      const img = new window.Image();
+      img.src = URL.createObjectURL(result);
+      console.log("Image object:", img);
+      img.onload = () => {
+        console.log("Image object loaded:", img);
+        console.log("natural width:", img.naturalWidth);
+        console.log("natural height:", img.naturalHeight);
+        setImageDims({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      };
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -122,10 +139,15 @@ export default function ShowRecipe() {
           </div>
         )
       )}
-      {image && (
+      {image && imageDims && (
         <div>
           <h2>Image:</h2>
-          <Image src={URL.createObjectURL(image)} alt="Fetched from database" />
+          <Image
+            src={URL.createObjectURL(image)}
+            alt="Fetched from database"
+            width={imageDims.width}
+            height={imageDims.height}
+          />
         </div>
       )}
     </div>
