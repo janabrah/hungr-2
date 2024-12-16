@@ -1,24 +1,121 @@
 "use client";
 import { useState } from "react";
-import Image from "next/image";
-import metadata from "../../../public/images/metadataDB.json";
+//import { NextResponse } from "next/server";
+//import Image from "next/image";
+//import metadata from "../../../public/images/metadataDB.json";
+const USERID = 1; // Temporarily keeping this simple
 
-type Recipe = {
+/*type Recipe = {
   Title: string;
   Description: string;
   Tags: string[];
   Filename: string;
-};
+};*/
 
 type Metadata = {
-  details: {
-    [key: string]: Recipe;
-  };
+  filename: string;
+  tagString: string;
+  createdAt: string;
+  imageUrl: string;
 };
 
-const typedMetadata: Metadata = metadata;
+//const typedMetadata: Metadata = metadata;
 
 export default function ShowRecipe() {
+  const [data, setData] = useState<Metadata[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string>("");
+  const [image, setImage] = useState<Blob | null>(null);
+
+  const userId = USERID;
+  console.log("Entering showrecipe");
+  const fetchData = async () => {
+    try {
+      const url = `/api/recipe/upload?type=metadata&user_id=${userId}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch data");
+      }
+      const result = await response.json();
+      setData(packageData(result));
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        console.error("Unknown error:", error);
+        setError("An unknown error occurred and error was the wrong type");
+      }
+    }
+  };
+
+  const fetchImage = async (imageUrl: string) => {
+    console.log("imageUrl:", imageUrl);
+    try {
+      const response = await fetch(imageUrl);
+      console.log("Response:", response);
+      if (!response.ok) {
+        throw new Error("Failed to fetch image");
+      }
+      console.log("Response is ok:", response);
+      const result = await response.blob();
+      console.log("Image result:", result);
+      setImage(result);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        console.error("Unknown error:", error);
+        setError("An unknown error occurred and error was the wrong type");
+      }
+    }
+  };
+
+  const handleSubmit = () => {
+    console.log("Selected option:", selectedOption);
+    const image = fetchImage(selectedOption);
+    console.log(image);
+  };
+  console.log(image);
+  return (
+    <div>
+      <h1>Fetch Data</h1>
+      <button onClick={() => fetchData()}>Fetch Options</button>
+      {error && <div>Error: {error}</div>}
+      {data != null && data.length > 0 && (
+        <div>
+          <h2>Data:</h2>
+          <select
+            value={selectedOption}
+            onChange={(event) => setSelectedOption(event.target.value)}
+            className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="" disabled>
+              Select an option
+            </option>
+            {data.map((item, index) => (
+              <option key={index} value={item.imageUrl}>
+                {item.filename} - {item.tagString}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleSubmit}
+            className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
+          >
+            Submit
+          </button>
+        </div>
+      )}
+      {image && (
+        <div>
+          <h2>Image:</h2>
+          <img src={URL.createObjectURL(image)} alt="Fetched from database" />
+        </div>
+      )}
+    </div>
+  );
+
+  /*
   const [selectedTitle, setSelectedTitle] = useState(
     Object.keys(typedMetadata.details)[0]
   );
@@ -57,5 +154,34 @@ export default function ShowRecipe() {
         )}
       </main>
     </div>
-  );
+  );*/
+}
+
+function packageData(data: object[]): Metadata[] {
+  return data.map((item) => {
+    const validItem = item as {
+      filename: string;
+      tag_string: string;
+      created_at: string;
+      url: string;
+    };
+
+    if (
+      typeof validItem !== "object" ||
+      !validItem ||
+      typeof validItem.filename !== "string" ||
+      typeof validItem.tag_string !== "string" ||
+      typeof validItem.created_at !== "string" ||
+      typeof validItem.url !== "string"
+    ) {
+      throw new Error("Data is missing required fields");
+    }
+
+    return {
+      filename: validItem.filename,
+      tagString: validItem.tag_string,
+      createdAt: validItem.created_at,
+      imageUrl: validItem.url,
+    };
+  });
 }

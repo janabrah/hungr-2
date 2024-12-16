@@ -27,12 +27,41 @@ export async function POST(request: Request): Promise<NextResponse> {
   return NextResponse.json({ image, metadata });
 }
 
-// The next lines are required for Pages API Routes only
-// export const config = {
-//   api: {
-//     bodyParser: false,
-//   },
-// };
+export async function GET(request: Request): Promise<NextResponse> {
+  const { searchParams } = new URL(request.url);
+  if (searchParams.get("type") == "image") {
+    return getImage(searchParams);
+  } else {
+    return getImageOptions(searchParams);
+  }
+}
+
+async function getImage(searchParams: URLSearchParams): Promise<NextResponse> {
+  // copilot generated, is wrong
+  const url = searchParams.get("imageUrl");
+  if (!url) {
+    throw "url is required";
+  }
+  const res = await fetch(url);
+  console.log(res);
+  return NextResponse.json(res);
+}
+
+async function getImageOptions(
+  searchParams: URLSearchParams
+): Promise<NextResponse> {
+  // copilot generated, is wrong
+  const { data, error } = await supabase
+    .from("files")
+    .select("filename, tag_string, created_at, url")
+    .eq("user_id", searchParams.get("user_id"))
+    .order("created_at", { ascending: false })
+    .range(0, 100);
+  if (error) {
+    throw error.message;
+  }
+  return NextResponse.json(data);
+}
 
 async function sendImage(
   filename: string,
