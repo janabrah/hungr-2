@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 //import { NextResponse } from "next/server";
-//import Image from "next/image";
+import Image from "next/image";
 //import metadata from "../../../public/images/metadataDB.json";
 const USERID = 1; // Temporarily keeping this simple
 
@@ -26,14 +26,11 @@ export default function ShowRecipe() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [image, setImage] = useState<Blob | null>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const userId = USERID;
   console.log("Entering showrecipe");
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const url = `/api/recipe/upload?type=metadata&user_id=${userId}`;
       const response = await fetch(url);
@@ -50,7 +47,12 @@ export default function ShowRecipe() {
         setError("An unknown error occurred and error was the wrong type");
       }
     }
-  };
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const fetchImage = async (imageUrl: string) => {
     console.log("imageUrl:", imageUrl);
@@ -74,9 +76,9 @@ export default function ShowRecipe() {
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Selected option:", selectedOption);
-    const image = fetchImage(selectedOption);
+  const handleSubmit = (imageUrl: string) => {
+    console.log("Selected option:", imageUrl);
+    const image = fetchImage(imageUrl);
     console.log(image);
   };
   console.log(image);
@@ -84,35 +86,46 @@ export default function ShowRecipe() {
     <div>
       <h1>Please choose the recipe you want to load.</h1>
       {error && <div>Error: {error}</div>}
-      {data != null && data.length > 0 && (
+      {loading ? (
         <div>
-          <h2>Data:</h2>
+          <h2>Loading...</h2>
           <select
-            value={selectedOption}
-            onChange={(event) => setSelectedOption(event.target.value)}
             className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled
           >
-            <option value="" disabled>
-              Select an option
-            </option>
-            {data.map((item, index) => (
-              <option key={index} value={item.imageUrl}>
-                {item.filename} - {item.tagString}
-              </option>
-            ))}
+            <option>Loading options...</option>
           </select>
-          <button
-            onClick={handleSubmit}
-            className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 mt-4"
-          >
-            Submit
-          </button>
         </div>
+      ) : (
+        data != null &&
+        data.length > 0 && (
+          <div>
+            <h2>Data:</h2>
+            <select
+              value={selectedOption}
+              onChange={(event) => {
+                const selectedValue = event.target.value;
+                setSelectedOption(selectedValue);
+                handleSubmit(selectedValue);
+              }}
+              className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="" disabled>
+                Select an option
+              </option>
+              {data.map((item, index) => (
+                <option key={index} value={item.imageUrl}>
+                  {item.filename} - {item.tagString}
+                </option>
+              ))}
+            </select>
+          </div>
+        )
       )}
       {image && (
         <div>
           <h2>Image:</h2>
-          <img src={URL.createObjectURL(image)} alt="Fetched from database" />
+          <Image src={URL.createObjectURL(image)} alt="Fetched from database" />
         </div>
       )}
     </div>
