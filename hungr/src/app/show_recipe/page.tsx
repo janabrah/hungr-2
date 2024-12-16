@@ -1,8 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-//import { NextResponse } from "next/server";
 import Image from "next/image";
-//import metadata from "../../../public/images/metadataDB.json";
 const USERID = 1; // Temporarily keeping this simple
 
 /*type Recipe = {
