@@ -1,0 +1,13 @@
+Short term:
+- Multiple images per recipe
+- Differentiate users
+- OCR and text recipes
+- Navigate back home 
+
+Medium term:
+- Sharing between users
+- Ratings (searchable)
+- Pictures of completed recipes
+
+Long term:
+- Feed
