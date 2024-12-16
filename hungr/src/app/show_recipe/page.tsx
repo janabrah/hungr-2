@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 //import { NextResponse } from "next/server";
 //import Image from "next/image";
 //import metadata from "../../../public/images/metadataDB.json";
@@ -26,6 +26,10 @@ export default function ShowRecipe() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [image, setImage] = useState<Blob | null>(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const userId = USERID;
   console.log("Entering showrecipe");
@@ -78,8 +82,7 @@ export default function ShowRecipe() {
   console.log(image);
   return (
     <div>
-      <h1>Fetch Data</h1>
-      <button onClick={() => fetchData()}>Fetch Options</button>
+      <h1>Please choose the recipe you want to load.</h1>
       {error && <div>Error: {error}</div>}
       {data != null && data.length > 0 && (
         <div>
