@@ -2,6 +2,7 @@ Short term:
 - Multiple images per recipe
 - Differentiate users
 - OCR and text recipes
+- Search by tag
 
 Medium term:
 - Sharing between users
