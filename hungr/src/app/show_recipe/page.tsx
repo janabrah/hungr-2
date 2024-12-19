@@ -48,6 +48,15 @@ async function fetchMetadata(userId: number): Promise<Metadata[]> {
   return packageData(result);
 }
 
+function getTagMetadata(data: Metadata[] | null, tag: string): Metadata[] {
+  // When the metadata dataset gets bigger, should probably do a new sql query
+  // instead of reprocessing the tag strings
+  if (!data) {
+    return [];
+  }
+  return data.filter((item) => item.tagString.split(", ").includes(tag));
+}
+
 async function fetchImageDetails(imageUrl: string): Promise<{
   image: Blob;
   dimensions: { width: number; height: number };
@@ -109,8 +118,40 @@ export default function ShowRecipe() {
     }
   };
 
+  const tagSearch = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const tag = event.currentTarget.querySelector("input")?.value;
+    if (!tag) {
+      return;
+    }
+    try {
+      setLoading(true);
+      setData(getTagMetadata(data, tag));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
+      <h1>If you would like to search for a specific tag, enter it here</h1>
+      <form onSubmit={tagSearch}>
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            placeholder="Enter a search tag"
+            className="block p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+          />
+          <button
+            type="submit"
+            className="block p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Search
+          </button>
+        </div>
+      </form>
       <h1>Please choose the recipe you want to load.</h1>
       {error && <div>Error: {error}</div>}
       {loading ? (
@@ -135,7 +176,7 @@ export default function ShowRecipe() {
                 setSelectedOption(selectedValue);
                 handleSelectionChange(selectedValue);
               }}
-              className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             >
               <option value="" disabled>
                 Select an option
