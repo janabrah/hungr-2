@@ -1,13 +1,22 @@
 Short term:
 - Multiple images per recipe
 - Differentiate users
-- OCR and text recipes
-- Search by tag
+- Store links instead of screenshots
+- Edit tags for live recipe
 
 Medium term:
 - Sharing between users
 - Ratings (searchable)
+- OCR and text recipes
+- - Auto tagging (vegetarian, easy, etc)
+- - Nice rendering
+- - Ingredients, instructions, notes
+- - - Users add notes
 - Pictures of completed recipes
 
 Long term:
 - Feed
+
+
+Bugs:
+- Searching by tag after the first tag only searches the already-filtered list
