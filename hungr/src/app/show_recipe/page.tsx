@@ -84,10 +84,9 @@ export default function ShowRecipe() {
   const [error, setError] = useState<string | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [image, setImage] = useState<Blob | null>(null);
-  const [imageDims, setImageDims] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+  const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(
+    null
+  );
   const [loading, setLoading] = useState<boolean>(true);
 
   const userId = USERID;
