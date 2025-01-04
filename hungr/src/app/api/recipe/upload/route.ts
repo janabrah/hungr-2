@@ -103,7 +103,10 @@ async function sendMetadata(
 
     const files = [];
     for (const imageUrl of imageUrls) {
-      const file = await writeToTable("files", { url: imageUrl, image: true });
+      const file = await writeToTable("files_temp", {
+        url: imageUrl,
+        image: true,
+      });
       files.push(file);
     }
 
@@ -164,13 +167,13 @@ function createID(str: string): number {
 
 async function writeToTable(
   table: string,
-  payload: any,
+  payload: object,
   selectSingle: boolean = true,
   upsert: boolean = false
 ) {
   console.log("setting: " + JSON.stringify(payload));
-  var result;
-  var err;
+  let result;
+  let err;
   if (upsert) {
     const { data: myData, error: myError } = await supabase
       .from(table)
