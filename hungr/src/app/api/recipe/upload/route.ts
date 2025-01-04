@@ -95,54 +95,31 @@ async function sendMetadata(
   console.log("in sendmetadata, tags", tags);
 
   try {
-    // Insert file into 'files' table
-    console.log("setting file in files");
-    const { data: file, error: fileError } = await supabase
-      .from("files")
-      .insert([{ filename, url: imageUrl, user_id: 1, tag_string: tags }])
-      .select()
-      .single();
+    const recipe = await writeToTable("recipes", {
+      filename,
+      user_id: 1,
+      tag_string: tags,
+    });
 
-    console.log("set file");
-
-    if (fileError) {
-      throw new Error(fileError.message);
-    }
-
-    // Insert tags into 'tags' table
-    const tagInserts = tags
+    const tagPayload = tags
       .split(", ")
       .map((tag: string) => ({ id: createID(tag), name: tag }));
-    console.log("setting tags in tags", tagInserts);
-    const { data: insertedTags, error: tagError } = await supabase
-      .from("tags")
-      .upsert(tagInserts, { onConflict: "id" })
-      .select();
-    console.log("set tags, insertedTags", insertedTags);
 
-    if (tagError) {
-      throw new Error(tagError.message);
+    const insertedTags = await writeToTable("tags", tagPayload, false, true);
+
+    if (!Array.isArray(insertedTags)) {
+      throw new Error("insertedTags is not an array");
     }
 
-    // Link tags to the file in 'file_tags' table
-    console.log("setting fileTagLinks in file_tags");
     const fileTagLinks = insertedTags.map((tag) => ({
-      file_id: file.id,
+      file_id: recipe.id,
       tag_id: tag.id,
     }));
-    console.log("set fileTagLinks", fileTagLinks);
 
     // Upload tags to 'file_tags' table
-    const { error: linkError } = await supabase
-      .from("file_tags")
-      .insert(fileTagLinks);
-    console.log("linkError", linkError);
+    const tagLinksResult = writeToTable("file_tags", fileTagLinks, true);
 
-    if (linkError) {
-      throw new Error(linkError.message);
-    }
-
-    return NextResponse.json({ success: true, file, tags: insertedTags });
+    return NextResponse.json({ success: true, recipe, tags: insertedTags });
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error uploading recipe:", error.message);
@@ -162,4 +139,49 @@ function createID(str: string): number {
   console.log(hash);
   console.log(hash.slice(0, 8));
   return parseInt(hash.slice(0, 8), 16);
+}
+
+async function writeToTable(
+  table: string,
+  payload: any,
+  selectSingle: boolean = true,
+  upsert: boolean = false
+) {
+  console.log("setting: " + JSON.stringify(payload));
+  var result;
+  var err;
+  if (upsert) {
+    const { data: myData, error: myError } = await supabase
+      .from(table)
+      .upsert(payload, { onConflict: "id" })
+      .select();
+
+    result = myData;
+    err = myError;
+  } else {
+    if (selectSingle) {
+      const { data: myData, error: myError } = await supabase
+        .from(table)
+        .insert([payload])
+        .select()
+        .single();
+
+      result = myData;
+      err = myError;
+    } else {
+      const { data: myData, error: myError } = await supabase
+        .from("file_tags")
+        .insert(payload)
+        .select("*");
+
+      result = myData;
+      err = myError;
+    }
+  }
+
+  if (err) {
+    throw new Error(err.message);
+  }
+  console.log("set data and got: " + JSON.stringify(result));
+  return result;
 }

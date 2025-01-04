@@ -33,7 +33,7 @@ export default function AvatarUploadPage() {
 
   return (
     <>
-      <h1>Upload Your Avatar</h1>
+      <h1>Upload an image of your recipe.</h1>
 
       <form onSubmit={handleSubmit}>
         <input
@@ -72,6 +72,7 @@ export default function AvatarUploadPage() {
     </>
   );
 }
+
 async function sendUpload(
   inputFileRef: React.RefObject<HTMLInputElement | null>,
   setImageBlob: React.Dispatch<React.SetStateAction<PutBlobResult | null>>,
