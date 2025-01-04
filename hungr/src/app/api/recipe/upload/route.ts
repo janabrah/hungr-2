@@ -23,7 +23,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const image = await sendImage(filename, request.body);
   const imageBlob = await image.json();
   console.log("imageblob", imageBlob, JSON.stringify(imageBlob));
-  const metadata = await sendMetadata(filename, tagString, imageBlob.url);
+  const metadata = await sendMetadata(filename, tagString, [imageBlob.url]);
   return NextResponse.json({ image, metadata });
 }
 
@@ -86,7 +86,7 @@ async function sendImage(
 async function sendMetadata(
   filename: string,
   tags: string | null,
-  imageUrl: string
+  imageUrls: string[]
 ): Promise<NextResponse> {
   // ⚠️ The below code is for App Router Route Handlers only
   if (!tags || metadataBypass) {
@@ -100,6 +100,25 @@ async function sendMetadata(
       user_id: 1,
       tag_string: tags,
     });
+
+    const files = [];
+    for (const imageUrl of imageUrls) {
+      const file = await writeToTable("files", { url: imageUrl, image: true });
+      files.push(file);
+    }
+
+    const fileIdPayload = files.map((file) => ({
+      file_id: file.id,
+      recipe_id: recipe.id,
+    }));
+
+    const recipeFileLinks = await writeToTable(
+      "recipe_files",
+      fileIdPayload,
+      false
+    );
+
+    console.log("recipeFileLinks is: " + JSON.stringify(recipeFileLinks));
 
     const tagPayload = tags
       .split(", ")
@@ -117,7 +136,9 @@ async function sendMetadata(
     }));
 
     // Upload tags to 'file_tags' table
-    const tagLinksResult = writeToTable("file_tags", fileTagLinks, true);
+    const tagLinksResult = writeToTable("file_tags", fileTagLinks, false);
+
+    console.log("tagLinksResult is: " + JSON.stringify(tagLinksResult));
 
     return NextResponse.json({ success: true, recipe, tags: insertedTags });
   } catch (error) {
