@@ -116,7 +116,7 @@ async function sendMetadata(
     }));
 
     const recipeFileLinks = await writeToTable(
-      "recipe_files",
+      "file_recipes_temp",
       fileIdPayload,
       false
     );
@@ -134,12 +134,12 @@ async function sendMetadata(
     }
 
     const fileTagLinks = insertedTags.map((tag) => ({
-      file_id: recipe.id,
+      recipe_id: recipe.id,
       tag_id: tag.id,
     }));
 
-    // Upload tags to 'file_tags' table
-    const tagLinksResult = writeToTable("file_tags", fileTagLinks, false);
+    // Upload tags to 'recipe_tags' table
+    const tagLinksResult = writeToTable("recipe_tags", fileTagLinks, false);
 
     console.log("tagLinksResult is: " + JSON.stringify(tagLinksResult));
 
@@ -194,7 +194,7 @@ async function writeToTable(
       err = myError;
     } else {
       const { data: myData, error: myError } = await supabase
-        .from("file_tags")
+        .from(table)
         .insert(payload)
         .select("*");
 
