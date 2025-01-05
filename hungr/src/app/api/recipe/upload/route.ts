@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { put, PutBlobResult } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
@@ -13,6 +13,8 @@ const supabase = createClient(
 
 export async function POST(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
+  const formData = await request.formData();
+  const files = formData.getAll("file");
   const filename = searchParams.get("filename");
   console.log("filename", filename);
   const tagString = searchParams.get("tagString");
@@ -20,11 +22,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!filename) {
     throw "filename is required";
   }
-  const image = await sendImage(filename, request.body);
-  const imageBlob = await image.json();
-  console.log("imageblob", imageBlob, JSON.stringify(imageBlob));
-  const metadata = await sendMetadata(filename, tagString, [imageBlob.url]);
-  return NextResponse.json({ image, metadata });
+  const images = await sendImages(filename, files);
+  const imagesJson = await images.json();
+  const imageBlobs = imagesJson.map((image: PutBlobResult) => image.url);
+  console.log("imageblob", imageBlobs, JSON.stringify(imageBlobs));
+  const metadata = await sendMetadata(filename, tagString, [imageBlobs.url]);
+  return NextResponse.json({ images, metadata });
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
@@ -87,24 +90,27 @@ async function getImageOptions(
   return NextResponse.json({ recipeData, fileData, mappingData });
 }
 
-async function sendImage(
+async function sendImages(
   filename: string,
-  requestBody: ReadableStream<Uint8Array> | null
+  files: FormDataEntryValue[]
 ): Promise<NextResponse> {
   console.log("sending image");
   if (imageBypass) {
     return NextResponse.json(null);
   }
   // ⚠️ The below code is for App Router Route Handlers only
-  if (!requestBody) {
-    throw "filename and request body is required";
+  const blobs = [];
+  let pageNum = 0;
+  for (const file of files) {
+    pageNum++;
+    const blob = await put(filename + pageNum, file, {
+      access: "public",
+    });
+    console.log("blob", blob);
+    blobs.push(blob);
   }
-  const blob = await put(filename, requestBody, {
-    access: "public",
-  });
-  console.log("blob", blob);
 
-  return NextResponse.json(blob);
+  return NextResponse.json(blobs);
 }
 
 async function sendMetadata(
@@ -134,9 +140,11 @@ async function sendMetadata(
       files.push(file);
     }
 
+    let pageNum = 0;
     const fileIdPayload = files.map((file) => ({
       file_id: file.id,
       recipe_id: recipe.id,
+      page_number: pageNum++,
     }));
 
     const recipeFileLinks = await writeToTable(

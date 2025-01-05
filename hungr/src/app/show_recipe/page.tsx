@@ -55,7 +55,7 @@ function packageData(
       return acc;
     }, [] as number[]);
     console.log("fileIds are: " + fileIds);
-    console.log("getting fileUrls");
+    console.log("getting fileUrls from fileData: " + JSON.stringify(fileData));
     const fileUrls = fileData.reduce((acc: string[], fileItem) => {
       const validFileItem = fileItem as { id: number; url: string };
       if (
@@ -81,6 +81,7 @@ function packageData(
 }
 
 async function fetchMetadata(userId: number): Promise<Metadata[]> {
+  console.log("in fetchMetadata");
   const url = `/api/recipe/upload?type=metadata&user_id=${userId}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Failed to fetch data");
@@ -145,7 +146,9 @@ export default function ShowRecipe() {
         setData(metadata);
       } catch (err) {
         console.log(JSON.stringify(err));
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
+        setError(
+          err instanceof Error ? "1" + err.message : "Unknown error occurred"
+        );
       } finally {
         setLoading(false);
       }
@@ -162,7 +165,9 @@ export default function ShowRecipe() {
       setImages(images);
     } catch (err) {
       console.log(JSON.stringify(err));
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      setError(
+        err instanceof Error ? "2" + err.message : "Unknown error occurred"
+      );
     }
   };
 
@@ -177,7 +182,9 @@ export default function ShowRecipe() {
       setData(getTagMetadata(data, tag));
     } catch (err) {
       console.log(JSON.stringify(err));
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      setError(
+        err instanceof Error ? "3" + err.message : "Unknown error occurred"
+      );
     } finally {
       setLoading(false);
     }

@@ -14,11 +14,13 @@ export default function AvatarUploadPage() {
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   console.log(metadataBlob, setMetadataBlob);
 
+  const newRef = useRef<HTMLInputElement>(null);
+
   const handleFileChange = (index: number) => {
     if (index === fileInputs.length - 1) {
       setFileInputs([
         ...fileInputs,
-        { id: fileInputs.length + 1, ref: useRef<HTMLInputElement>(null) },
+        { id: fileInputs.length + 1, ref: newRef },
       ]);
     }
   };
@@ -53,7 +55,7 @@ export default function AvatarUploadPage() {
             name={`file-${input.id}`}
             ref={input.ref}
             type="file"
-            required
+            required={index === 0}
             onChange={() => handleFileChange(index)}
             className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
@@ -93,80 +95,47 @@ export default function AvatarUploadPage() {
 }
 
 async function sendUpload(
-  fileRefs: React.RefObject<HTMLInputElement>[],
+  fileRefs: React.RefObject<HTMLInputElement | null>[],
   setImageBlobs: React.Dispatch<React.SetStateAction<PutBlobResult[]>>,
   metadataRef: React.RefObject<HTMLInputElement | null>,
   setMetedataBlob: React.Dispatch<React.SetStateAction<PutBlobResult | null>>,
   filenameRef: React.RefObject<HTMLInputElement | null>
 ) {
-  const files = fileRefs.flatMap((ref) =>
-    ref.current?.files ? Array.from(ref.current.files) : []
-  );
-  if (files.length === 0) {
+  const formData = new FormData();
+  fileRefs.forEach((ref, index) => {
+    if (ref.current?.files) {
+      Array.from(ref.current.files).forEach((file) => {
+        formData.append(`file-${index}`, file);
+      });
+    }
+  });
+
+  if (Array.from(formData.values()).length === 0) {
     throw new Error("No files selected");
   }
 
   const tagString = metadataRef.current?.value;
   const uploadedBlobs: PutBlobResult[] = [];
 
-  const recipe = await createRecipe(tagString, files, filenameRef);
-
-  let pageNum = 0;
-  for (const file of files) {
-    const response = await uploadFile(file, tagString, filenameRef, pageNum++);
-
-    const newBlob = (await response.json()) as PutBlobResult;
-    console.log(JSON.stringify(newBlob));
-    uploadedBlobs.push(newBlob);
-  }
-  setImageBlobs(uploadedBlobs);
-}
-
-async function uploadFile(
-  file: File,
-  filenameRef: React.RefObject<HTMLInputElement | null>,
-  pageNum: number
-) {
-  let filename = file.name;
+  let filename = null;
   if (filenameRef.current?.value) {
     filename = filenameRef.current.value;
   }
 
-  const url = `/api/recipe/upload?filename=${filename}&pageNum=${pageNum}&type=file`;
+  const url = `/api/recipe/upload?filename=${filename}&tagString=${tagString}`;
 
   console.log("inpage, sending url: ", url);
   const response = await fetch(url, {
     method: "POST",
-    body: file,
+    body: formData,
   });
 
   if (!response.ok) {
     throw new Error("Failed to upload file");
   }
-
-  return response;
-}
-
-async function createRecipe(
-  tagString: string | undefined,
-  files: File[],
-  filenameRef: React.RefObject<HTMLInputElement | null>
-) {
-  let filename = files[0].name;
-  if (filenameRef.current?.value) {
-    filename = filenameRef.current.value;
-  }
-
-  const url = `/api/recipe/upload?filename=${filename}&tagString=${tagString}&type=recipe`;
-
-  console.log("inpage, sending url: ", url);
-  const response = await fetch(url, {
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to create recipe");
-  }
-
-  return response;
+  console.log(setMetedataBlob);
+  return;
+  const newBlob = (await response.json()) as PutBlobResult;
+  console.log(JSON.stringify(newBlob));
+  setImageBlobs(uploadedBlobs);
 }
