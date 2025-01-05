@@ -1,5 +1,5 @@
 Short term:
-- Multiple images per recipe
+- Multiple images per recipe [In progress]
 - Differentiate users
 - Store links instead of screenshots
 - Edit tags for live recipe
