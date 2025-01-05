@@ -125,12 +125,10 @@ async function fetchImageDetails(imageUrl: string): Promise<{
 export default function ShowRecipe() {
   const [data, setData] = useState<Metadata[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>("");
-  const [image, setImage] = useState<Blob | null>(null);
-  const [imageDims, setImageDims] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string[]>([]);
+  const [images, setImages] = useState<
+    Array<{ image: Blob; dimensions: { width: number; height: number } }>
+  >([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const userId = USERID;
@@ -154,11 +152,14 @@ export default function ShowRecipe() {
     })();
   }, [userId]);
 
-  const handleSelectionChange = async (imageUrl: string) => {
+  const handleSelectionChange = async (imageUrls: string[]) => {
     try {
-      const { image, dimensions } = await fetchImageDetails(imageUrl);
-      setImage(image);
-      setImageDims(dimensions);
+      const images = [];
+      for (const imageUrl of imageUrls) {
+        const { image, dimensions } = await fetchImageDetails(imageUrl);
+        images.push({ image, dimensions });
+      }
+      setImages(images);
     } catch (err) {
       console.log(JSON.stringify(err));
       setError(err instanceof Error ? err.message : "Unknown error occurred");
@@ -222,8 +223,8 @@ export default function ShowRecipe() {
               onChange={(event) => {
                 const selectedValue = event.target.value;
                 console.log("selected value: " + selectedValue);
-                setSelectedOption(selectedValue);
-                handleSelectionChange(selectedValue);
+                setSelectedOption(JSON.parse(selectedValue));
+                handleSelectionChange(JSON.parse(selectedValue));
               }}
               className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             >
@@ -239,15 +240,18 @@ export default function ShowRecipe() {
           </div>
         )
       )}
-      {image && imageDims && (
+      {images.length > 0 && (
         <div>
-          <h2>Image:</h2>
-          <Image
-            src={URL.createObjectURL(image)}
-            alt="Fetched from database"
-            width={imageDims.width}
-            height={imageDims.height}
-          />
+          <h2>Images:</h2>
+          {images.map((imgData, index) => (
+            <Image
+              key={index}
+              src={URL.createObjectURL(imgData.image)}
+              alt={`Fetched from database ${index}`}
+              width={imgData.dimensions.width}
+              height={imgData.dimensions.height}
+            />
+          ))}
         </div>
       )}
     </div>
