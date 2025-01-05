@@ -8,16 +8,23 @@ type Metadata = {
   filename: string;
   tagString: string;
   createdAt: string;
-  imageUrl: string;
+  imageUrls: string[];
 };
 
-function packageData(data: object[]): Metadata[] {
-  return data.map((item) => {
+function packageData(
+  recipeData: object[],
+  fileData: object[],
+  mappingData: object[]
+): Metadata[] {
+  console.log(recipeData);
+  console.log(fileData);
+  console.log(mappingData);
+  return recipeData.map((item) => {
     const validItem = item as {
+      id: number;
       filename: string;
       tag_string: string;
       created_at: string;
-      url: string;
     };
 
     if (
@@ -25,17 +32,50 @@ function packageData(data: object[]): Metadata[] {
       !validItem ||
       typeof validItem.filename !== "string" ||
       typeof validItem.tag_string !== "string" ||
-      typeof validItem.created_at !== "string" ||
-      typeof validItem.url !== "string"
+      typeof validItem.created_at !== "string"
     ) {
       throw new Error("Data is missing required fields");
     }
-
+    console.log("getting fileIds");
+    const fileIds = mappingData.reduce((acc: number[], mappingItem) => {
+      const validMappingItem = mappingItem as {
+        recipe_id: number;
+        file_id: number;
+      };
+      if (
+        typeof validMappingItem !== "object" ||
+        !validMappingItem ||
+        typeof validMappingItem.recipe_id !== "number"
+      ) {
+        throw new Error("Data is missing required fields");
+      }
+      if (validMappingItem.recipe_id === validItem.id) {
+        acc.push(validMappingItem.file_id);
+      }
+      return acc;
+    }, [] as number[]);
+    console.log("fileIds are: " + fileIds);
+    console.log("getting fileUrls");
+    const fileUrls = fileData.reduce((acc: string[], fileItem) => {
+      const validFileItem = fileItem as { id: number; url: string };
+      if (
+        typeof validFileItem !== "object" ||
+        !validFileItem ||
+        typeof validFileItem.url !== "string"
+      ) {
+        throw new Error("Data is missing required fields");
+      }
+      if (fileIds.includes(validFileItem.id)) {
+        acc.push(validFileItem.url);
+      }
+      return acc;
+    }, [] as string[]);
+    console.log("fileUrls is: " + JSON.stringify(fileUrls));
     return {
       filename: validItem.filename,
       tagString: validItem.tag_string,
       createdAt: validItem.created_at,
-      imageUrl: validItem.url,
+      imageUrls: fileUrls,
     };
   });
 }
@@ -45,7 +85,8 @@ async function fetchMetadata(userId: number): Promise<Metadata[]> {
   const response = await fetch(url);
   if (!response.ok) throw new Error("Failed to fetch data");
   const result = await response.json();
-  return packageData(result);
+  console.log("got result: " + JSON.stringify(result));
+  return packageData(result.recipeData, result.fileData, result.mappingData);
 }
 
 function getTagMetadata(data: Metadata[] | null, tag: string): Metadata[] {
@@ -54,6 +95,7 @@ function getTagMetadata(data: Metadata[] | null, tag: string): Metadata[] {
   if (!data) {
     return [];
   }
+  console.log("getting tag metadata");
   return data.filter((item) => item.tagString.split(", ").includes(tag));
 }
 
@@ -61,6 +103,7 @@ async function fetchImageDetails(imageUrl: string): Promise<{
   image: Blob;
   dimensions: { width: number; height: number };
 }> {
+  console.log("fetching image: " + imageUrl);
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error("Failed to fetch image");
 
@@ -98,9 +141,12 @@ export default function ShowRecipe() {
     (async () => {
       try {
         setLoading(true);
+        console.log("fetching metadata");
         const metadata = await fetchMetadata(userId);
+        console.log("metadata is: " + JSON.stringify(metadata));
         setData(metadata);
       } catch (err) {
+        console.log(JSON.stringify(err));
         setError(err instanceof Error ? err.message : "Unknown error occurred");
       } finally {
         setLoading(false);
@@ -114,6 +160,7 @@ export default function ShowRecipe() {
       setImage(image);
       setImageDims(dimensions);
     } catch (err) {
+      console.log(JSON.stringify(err));
       setError(err instanceof Error ? err.message : "Unknown error occurred");
     }
   };
@@ -128,6 +175,7 @@ export default function ShowRecipe() {
       setLoading(true);
       setData(getTagMetadata(data, tag));
     } catch (err) {
+      console.log(JSON.stringify(err));
       setError(err instanceof Error ? err.message : "Unknown error occurred");
     } finally {
       setLoading(false);
@@ -173,6 +221,7 @@ export default function ShowRecipe() {
               value={selectedOption}
               onChange={(event) => {
                 const selectedValue = event.target.value;
+                console.log("selected value: " + selectedValue);
                 setSelectedOption(selectedValue);
                 handleSelectionChange(selectedValue);
               }}
@@ -182,7 +231,7 @@ export default function ShowRecipe() {
                 Select an option
               </option>
               {data.map((item, index) => (
-                <option key={index} value={item.imageUrl}>
+                <option key={index} value={JSON.stringify(item.imageUrls)}>
                   {item.filename} - {item.tagString}
                 </option>
               ))}

@@ -51,16 +51,40 @@ async function getImageOptions(
   searchParams: URLSearchParams
 ): Promise<NextResponse> {
   // copilot generated, is wrong
-  const { data, error } = await supabase
-    .from("files")
-    .select("filename, tag_string, created_at, url")
+  const { data: recipeData, error: recipeError } = await supabase
+    .from("recipes")
+    .select("id, filename, tag_string, created_at")
     .eq("user_id", searchParams.get("user_id"))
     .order("created_at", { ascending: false })
     .range(0, 100);
-  if (error) {
-    throw error.message;
+  if (recipeError) {
+    console.log("error was: " + recipeError.message);
+    throw recipeError.message;
   }
-  return NextResponse.json(data);
+  console.log("recipeData was: " + JSON.stringify(recipeData));
+  const recipeIds = recipeData.map((recipe) => recipe.id);
+  const { data: mappingData, error: mappingError } = await supabase
+    .from("file_recipes_temp")
+    .select("file_id, recipe_id")
+    .in("recipe_id", recipeIds)
+    .range(0, 10000);
+  if (mappingError) {
+    console.log("error was: " + mappingError.message);
+    throw mappingError.message;
+  }
+  console.log("mappingData was: " + JSON.stringify(mappingData));
+  const fileIds = mappingData.map((mapping) => mapping.file_id);
+  const { data: fileData, error: fileError } = await supabase
+    .from("files_temp")
+    .select("id, url")
+    .in("id", fileIds)
+    .range(0, 10000);
+  if (fileError) {
+    console.log("error was: " + fileError.message);
+    throw fileError.message;
+  }
+  console.log("fileData was: " + JSON.stringify(fileData));
+  return NextResponse.json({ recipeData, fileData, mappingData });
 }
 
 async function sendImage(
