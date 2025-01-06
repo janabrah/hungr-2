@@ -57,6 +57,7 @@ function packageData(
     console.log("fileIds are: " + fileIds);
     console.log("getting fileUrls from fileData: " + JSON.stringify(fileData));
     const fileUrls = fileData.reduce((acc: string[], fileItem) => {
+      console.log(fileItem);
       const validFileItem = fileItem as { id: number; url: string };
       if (
         typeof validFileItem !== "object" ||
