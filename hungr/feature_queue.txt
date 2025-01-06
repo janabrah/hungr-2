@@ -14,6 +14,7 @@ Medium term:
 - - - Users add notes
 - Pictures of completed recipes
 - Ability to edit other data in a live recipe (inspired by wanting to change the page order in multi-file recipes)
+- Support for video recipes (instagram, tiktok, etc)
 
 Long term:
 - Feed
