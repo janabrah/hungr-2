@@ -145,7 +145,7 @@ async function sendMetadata(
     for (const imageUrl of imageUrls) {
       const file = await writeToTable("files", {
         url: imageUrl,
-        image: true,
+        type: "image",
       });
       files.push(file);
     }
