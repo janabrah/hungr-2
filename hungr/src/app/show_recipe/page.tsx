@@ -258,6 +258,7 @@ export default function ShowRecipe() {
               alt={`Fetched from database ${index}`}
               width={imgData.dimensions.width}
               height={imgData.dimensions.height}
+              className="pb-4"
             />
           ))}
         </div>
