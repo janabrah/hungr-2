@@ -1,4 +1,4 @@
-import { put } from "@vercel/blob";
+import { put, PutBlobResult } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
@@ -13,6 +13,10 @@ const supabase = createClient(
 
 export async function POST(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
+  const formData = await request.formData();
+  console.log("formData", formData);
+  const files = formData.getAll("file");
+  console.log("files", files);
   const filename = searchParams.get("filename");
   console.log("filename", filename);
   const tagString = searchParams.get("tagString");
@@ -20,11 +24,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!filename) {
     throw "filename is required";
   }
-  const image = await sendImage(filename, request.body);
-  const imageBlob = await image.json();
-  console.log("imageblob", imageBlob, JSON.stringify(imageBlob));
-  const metadata = await sendMetadata(filename, tagString, imageBlob.url);
-  return NextResponse.json({ image, metadata });
+  const images = await sendImages(filename, files);
+  console.log("images", images, JSON.stringify(images));
+  const imagesJson = await images.json();
+  console.log("imagesJson", imagesJson, JSON.stringify(imagesJson));
+  const imageBlobs = imagesJson.map((image: PutBlobResult) => image.url);
+  console.log("imageblob", imageBlobs, JSON.stringify(imageBlobs));
+  const metadata = await sendMetadata(filename, tagString, imageBlobs);
+  return NextResponse.json({ images, metadata });
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
@@ -51,42 +58,72 @@ async function getImageOptions(
   searchParams: URLSearchParams
 ): Promise<NextResponse> {
   // copilot generated, is wrong
-  const { data, error } = await supabase
-    .from("files")
-    .select("filename, tag_string, created_at, url")
+  const { data: recipeData, error: recipeError } = await supabase
+    .from("recipes")
+    .select("id, filename, tag_string, created_at")
     .eq("user_id", searchParams.get("user_id"))
     .order("created_at", { ascending: false })
     .range(0, 100);
-  if (error) {
-    throw error.message;
+  if (recipeError) {
+    console.log("error was: " + recipeError.message);
+    throw recipeError.message;
   }
-  return NextResponse.json(data);
+  console.log("recipeData was: " + JSON.stringify(recipeData));
+  const recipeIds = recipeData.map((recipe) => recipe.id);
+  const { data: mappingData, error: mappingError } = await supabase
+    .from("file_recipes")
+    .select("file_id, recipe_id")
+    .in("recipe_id", recipeIds)
+    .range(0, 10000);
+  if (mappingError) {
+    console.log("error was: " + mappingError.message);
+    throw mappingError.message;
+  }
+  console.log("mappingData was: " + JSON.stringify(mappingData));
+  const fileIds = mappingData.map((mapping) => mapping.file_id);
+  const { data: fileData, error: fileError } = await supabase
+    .from("files")
+    .select("id, url")
+    .in("id", fileIds)
+    .range(0, 10000);
+  if (fileError) {
+    console.log("error was: " + fileError.message);
+    throw fileError.message;
+  }
+  console.log("fileData was: " + JSON.stringify(fileData));
+  return NextResponse.json({ recipeData, fileData, mappingData });
 }
 
-async function sendImage(
+async function sendImages(
   filename: string,
-  requestBody: ReadableStream<Uint8Array> | null
+  files: FormDataEntryValue[]
 ): Promise<NextResponse> {
   console.log("sending image");
   if (imageBypass) {
+    console.log("bypassing image");
     return NextResponse.json(null);
+  } else {
+    console.log("not bypassing image");
   }
-  // ⚠️ The below code is for App Router Route Handlers only
-  if (!requestBody) {
-    throw "filename and request body is required";
+  console.log("files is", files, JSON.stringify(files));
+  const blobs = [];
+  let pageNum = 0;
+  for (const file of files) {
+    pageNum++;
+    const blob = await put(filename + pageNum, file, {
+      access: "public",
+    });
+    console.log("blob", blob);
+    blobs.push(blob);
   }
-  const blob = await put(filename, requestBody, {
-    access: "public",
-  });
-  console.log("blob", blob);
 
-  return NextResponse.json(blob);
+  return NextResponse.json(blobs);
 }
 
 async function sendMetadata(
   filename: string,
   tags: string | null,
-  imageUrl: string
+  imageUrls: string[]
 ): Promise<NextResponse> {
   // ⚠️ The below code is for App Router Route Handlers only
   if (!tags || metadataBypass) {
@@ -95,54 +132,60 @@ async function sendMetadata(
   console.log("in sendmetadata, tags", tags);
 
   try {
-    // Insert file into 'files' table
-    console.log("setting file in files");
-    const { data: file, error: fileError } = await supabase
-      .from("files")
-      .insert([{ filename, url: imageUrl, user_id: 1, tag_string: tags }])
-      .select()
-      .single();
+    console.log("sending recipe: " + filename + " with tags: " + tags);
+    const recipe = await writeToTable("recipes", {
+      filename,
+      user_id: 1,
+      tag_string: tags,
+    });
+    console.log("sending urls + " + imageUrls);
+    console.log("sending urls (JSON) + " + JSON.stringify(imageUrls));
 
-    console.log("set file");
-
-    if (fileError) {
-      throw new Error(fileError.message);
+    const files = [];
+    for (const imageUrl of imageUrls) {
+      const file = await writeToTable("files", {
+        url: imageUrl,
+        image: true,
+      });
+      files.push(file);
     }
 
-    // Insert tags into 'tags' table
-    const tagInserts = tags
+    let pageNum = 0;
+    const fileIdPayload = files.map((file) => ({
+      file_id: file.id,
+      recipe_id: recipe.id,
+      page_number: pageNum++,
+    }));
+
+    const recipeFileLinks = await writeToTable(
+      "file_recipes",
+      fileIdPayload,
+      false
+    );
+
+    console.log("recipeFileLinks is: " + JSON.stringify(recipeFileLinks));
+
+    const tagPayload = tags
       .split(", ")
       .map((tag: string) => ({ id: createID(tag), name: tag }));
-    console.log("setting tags in tags", tagInserts);
-    const { data: insertedTags, error: tagError } = await supabase
-      .from("tags")
-      .upsert(tagInserts, { onConflict: "id" })
-      .select();
-    console.log("set tags, insertedTags", insertedTags);
 
-    if (tagError) {
-      throw new Error(tagError.message);
+    const insertedTags = await writeToTable("tags", tagPayload, false, true);
+
+    if (!Array.isArray(insertedTags)) {
+      throw new Error("insertedTags is not an array");
     }
 
-    // Link tags to the file in 'file_tags' table
-    console.log("setting fileTagLinks in file_tags");
     const fileTagLinks = insertedTags.map((tag) => ({
-      file_id: file.id,
+      recipe_id: recipe.id,
       tag_id: tag.id,
     }));
-    console.log("set fileTagLinks", fileTagLinks);
 
-    // Upload tags to 'file_tags' table
-    const { error: linkError } = await supabase
-      .from("file_tags")
-      .insert(fileTagLinks);
-    console.log("linkError", linkError);
+    // Upload tags to 'recipe_tags' table
+    const tagLinksResult = writeToTable("recipe_tags", fileTagLinks, false);
 
-    if (linkError) {
-      throw new Error(linkError.message);
-    }
+    console.log("tagLinksResult is: " + JSON.stringify(tagLinksResult));
 
-    return NextResponse.json({ success: true, file, tags: insertedTags });
+    return NextResponse.json({ success: true, recipe, tags: insertedTags });
   } catch (error) {
     if (error instanceof Error) {
       console.error("Error uploading recipe:", error.message);
@@ -162,4 +205,49 @@ function createID(str: string): number {
   console.log(hash);
   console.log(hash.slice(0, 8));
   return parseInt(hash.slice(0, 8), 16);
+}
+
+async function writeToTable(
+  table: string,
+  payload: object,
+  selectSingle: boolean = true,
+  upsert: boolean = false
+) {
+  console.log("setting: " + JSON.stringify(payload));
+  let result;
+  let err;
+  if (upsert) {
+    const { data: myData, error: myError } = await supabase
+      .from(table)
+      .upsert(payload, { onConflict: "id" })
+      .select();
+
+    result = myData;
+    err = myError;
+  } else {
+    if (selectSingle) {
+      const { data: myData, error: myError } = await supabase
+        .from(table)
+        .insert([payload])
+        .select()
+        .single();
+
+      result = myData;
+      err = myError;
+    } else {
+      const { data: myData, error: myError } = await supabase
+        .from(table)
+        .insert(payload)
+        .select("*");
+
+      result = myData;
+      err = myError;
+    }
+  }
+
+  if (err) {
+    throw new Error(err.message);
+  }
+  console.log("set data and got: " + JSON.stringify(result));
+  return result;
 }

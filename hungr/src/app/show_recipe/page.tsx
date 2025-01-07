@@ -8,16 +8,23 @@ type Metadata = {
   filename: string;
   tagString: string;
   createdAt: string;
-  imageUrl: string;
+  imageUrls: string[];
 };
 
-function packageData(data: object[]): Metadata[] {
-  return data.map((item) => {
+function packageData(
+  recipeData: object[],
+  fileData: object[],
+  mappingData: object[]
+): Metadata[] {
+  console.log(recipeData);
+  console.log(fileData);
+  console.log(mappingData);
+  return recipeData.map((item) => {
     const validItem = item as {
+      id: number;
       filename: string;
       tag_string: string;
       created_at: string;
-      url: string;
     };
 
     if (
@@ -25,27 +32,63 @@ function packageData(data: object[]): Metadata[] {
       !validItem ||
       typeof validItem.filename !== "string" ||
       typeof validItem.tag_string !== "string" ||
-      typeof validItem.created_at !== "string" ||
-      typeof validItem.url !== "string"
+      typeof validItem.created_at !== "string"
     ) {
       throw new Error("Data is missing required fields");
     }
-
+    console.log("getting fileIds");
+    const fileIds = mappingData.reduce((acc: number[], mappingItem) => {
+      const validMappingItem = mappingItem as {
+        recipe_id: number;
+        file_id: number;
+      };
+      if (
+        typeof validMappingItem !== "object" ||
+        !validMappingItem ||
+        typeof validMappingItem.recipe_id !== "number"
+      ) {
+        throw new Error("Data is missing required fields");
+      }
+      if (validMappingItem.recipe_id === validItem.id) {
+        acc.push(validMappingItem.file_id);
+      }
+      return acc;
+    }, [] as number[]);
+    console.log("fileIds are: " + fileIds);
+    console.log("getting fileUrls from fileData: " + JSON.stringify(fileData));
+    const fileUrls = fileData.reduce((acc: string[], fileItem) => {
+      console.log(fileItem);
+      const validFileItem = fileItem as { id: number; url: string };
+      if (
+        typeof validFileItem !== "object" ||
+        !validFileItem ||
+        typeof validFileItem.url !== "string"
+      ) {
+        throw new Error("Data is missing required fields");
+      }
+      if (fileIds.includes(validFileItem.id)) {
+        acc.push(validFileItem.url);
+      }
+      return acc;
+    }, [] as string[]);
+    console.log("fileUrls is: " + JSON.stringify(fileUrls));
     return {
       filename: validItem.filename,
       tagString: validItem.tag_string,
       createdAt: validItem.created_at,
-      imageUrl: validItem.url,
+      imageUrls: fileUrls,
     };
   });
 }
 
 async function fetchMetadata(userId: number): Promise<Metadata[]> {
+  console.log("in fetchMetadata");
   const url = `/api/recipe/upload?type=metadata&user_id=${userId}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error("Failed to fetch data");
   const result = await response.json();
-  return packageData(result);
+  console.log("got result: " + JSON.stringify(result));
+  return packageData(result.recipeData, result.fileData, result.mappingData);
 }
 
 function getTagMetadata(data: Metadata[] | null, tag: string): Metadata[] {
@@ -54,6 +97,7 @@ function getTagMetadata(data: Metadata[] | null, tag: string): Metadata[] {
   if (!data) {
     return [];
   }
+  console.log("getting tag metadata");
   return data.filter((item) => item.tagString.split(", ").includes(tag));
 }
 
@@ -61,6 +105,7 @@ async function fetchImageDetails(imageUrl: string): Promise<{
   image: Blob;
   dimensions: { width: number; height: number };
 }> {
+  console.log("fetching image: " + imageUrl);
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error("Failed to fetch image");
 
@@ -82,12 +127,10 @@ async function fetchImageDetails(imageUrl: string): Promise<{
 export default function ShowRecipe() {
   const [data, setData] = useState<Metadata[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>("");
-  const [image, setImage] = useState<Blob | null>(null);
-  const [imageDims, setImageDims] = useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string[]>([]);
+  const [images, setImages] = useState<
+    Array<{ image: Blob; dimensions: { width: number; height: number } }>
+  >([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   const userId = USERID;
@@ -98,23 +141,34 @@ export default function ShowRecipe() {
     (async () => {
       try {
         setLoading(true);
+        console.log("fetching metadata");
         const metadata = await fetchMetadata(userId);
+        console.log("metadata is: " + JSON.stringify(metadata));
         setData(metadata);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
+        console.log(JSON.stringify(err));
+        setError(
+          err instanceof Error ? "1" + err.message : "Unknown error occurred"
+        );
       } finally {
         setLoading(false);
       }
     })();
   }, [userId]);
 
-  const handleSelectionChange = async (imageUrl: string) => {
+  const handleSelectionChange = async (imageUrls: string[]) => {
     try {
-      const { image, dimensions } = await fetchImageDetails(imageUrl);
-      setImage(image);
-      setImageDims(dimensions);
+      const images = [];
+      for (const imageUrl of imageUrls) {
+        const { image, dimensions } = await fetchImageDetails(imageUrl);
+        images.push({ image, dimensions });
+      }
+      setImages(images);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      console.log(JSON.stringify(err));
+      setError(
+        err instanceof Error ? "2" + err.message : "Unknown error occurred"
+      );
     }
   };
 
@@ -128,7 +182,10 @@ export default function ShowRecipe() {
       setLoading(true);
       setData(getTagMetadata(data, tag));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      console.log(JSON.stringify(err));
+      setError(
+        err instanceof Error ? "3" + err.message : "Unknown error occurred"
+      );
     } finally {
       setLoading(false);
     }
@@ -173,8 +230,9 @@ export default function ShowRecipe() {
               value={selectedOption}
               onChange={(event) => {
                 const selectedValue = event.target.value;
-                setSelectedOption(selectedValue);
-                handleSelectionChange(selectedValue);
+                console.log("selected value: " + selectedValue);
+                setSelectedOption(JSON.parse(selectedValue));
+                handleSelectionChange(JSON.parse(selectedValue));
               }}
               className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             >
@@ -182,7 +240,7 @@ export default function ShowRecipe() {
                 Select an option
               </option>
               {data.map((item, index) => (
-                <option key={index} value={item.imageUrl}>
+                <option key={index} value={JSON.stringify(item.imageUrls)}>
                   {item.filename} - {item.tagString}
                 </option>
               ))}
@@ -190,15 +248,19 @@ export default function ShowRecipe() {
           </div>
         )
       )}
-      {image && imageDims && (
+      {images.length > 0 && (
         <div>
-          <h2>Image:</h2>
-          <Image
-            src={URL.createObjectURL(image)}
-            alt="Fetched from database"
-            width={imageDims.width}
-            height={imageDims.height}
-          />
+          <h2>Images:</h2>
+          {images.map((imgData, index) => (
+            <Image
+              key={index}
+              src={URL.createObjectURL(imgData.image)}
+              alt={`Fetched from database ${index}`}
+              width={imgData.dimensions.width}
+              height={imgData.dimensions.height}
+              className="pb-4"
+            />
+          ))}
         </div>
       )}
     </div>

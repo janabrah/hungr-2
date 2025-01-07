@@ -1,16 +1,33 @@
 "use client";
 
 import type { PutBlobResult } from "@vercel/blob";
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 
 export default function AvatarUploadPage() {
-  const inputFileRef = useRef<HTMLInputElement>(null);
+  const [fileInputs, setFileInputs] = useState([
+    { id: 1, ref: useRef<HTMLInputElement>(null) },
+  ]);
   const metadataRef = useRef<HTMLInputElement>(null);
   const filenameRef = useRef<HTMLInputElement>(null);
-  const [imageBlob, setImageBlob] = useState<PutBlobResult | null>(null);
+  const [imageBlobs, setImageBlobs] = useState<PutBlobResult[]>([]);
   const [metadataBlob, setMetadataBlob] = useState<PutBlobResult | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   console.log(metadataBlob, setMetadataBlob);
+
+  const newRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (index: number) => {
+    console.log("in handlefilechange, index", index);
+    if (index === fileInputs.length - 1) {
+      console.log("landed in if, newRef is", newRef);
+      setFileInputs((prevInputs) => [
+        ...prevInputs,
+        { id: prevInputs.length + 1, ref: React.createRef<HTMLInputElement>() },
+      ]);
+    } else {
+      console.log("landed in else, newRef is", newRef);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     if (isSubmitted) {
@@ -19,9 +36,13 @@ export default function AvatarUploadPage() {
     event.preventDefault();
     setIsSubmitted(true);
     try {
+      console.log("sending upload");
+      console.log("metadataRef", metadataRef);
+      console.log("filenameRef", filenameRef);
+      console.log("fileInputs", fileInputs);
       await sendUpload(
-        inputFileRef,
-        setImageBlob,
+        fileInputs.map((input) => input.ref),
+        setImageBlobs,
         metadataRef,
         setMetadataBlob,
         filenameRef
@@ -33,16 +54,20 @@ export default function AvatarUploadPage() {
 
   return (
     <>
-      <h1>Upload Your Avatar</h1>
+      <h1>Upload an image of your recipe.</h1>
 
       <form onSubmit={handleSubmit}>
-        <input
-          name="file"
-          ref={inputFileRef}
-          type="file"
-          required
-          className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        {fileInputs.map((input, index) => (
+          <input
+            key={input.id}
+            name={`file-${input.id}`}
+            ref={input.ref}
+            type="file"
+            required={index === 0}
+            onChange={() => handleFileChange(index)}
+            className="block w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        ))}
         <input
           name="metadata"
           ref={metadataRef}
@@ -64,30 +89,49 @@ export default function AvatarUploadPage() {
           Upload
         </button>
       </form>
-      {imageBlob && (
+      {imageBlobs.length > 0 && (
         <div>
-          Blob url: <a href={imageBlob.url}>{imageBlob.url}</a>
+          {imageBlobs.map((blob, index) => (
+            <div key={index}>
+              Blob: <a href={blob.url}>{blob.url}</a>
+            </div>
+          ))}
         </div>
       )}
     </>
   );
 }
+
 async function sendUpload(
-  inputFileRef: React.RefObject<HTMLInputElement | null>,
-  setImageBlob: React.Dispatch<React.SetStateAction<PutBlobResult | null>>,
+  fileRefs: React.RefObject<HTMLInputElement | null>[],
+  setImageBlobs: React.Dispatch<React.SetStateAction<PutBlobResult[]>>,
   metadataRef: React.RefObject<HTMLInputElement | null>,
   setMetedataBlob: React.Dispatch<React.SetStateAction<PutBlobResult | null>>,
   filenameRef: React.RefObject<HTMLInputElement | null>
 ) {
-  if (!inputFileRef.current?.files) {
-    throw new Error("No file selected");
+  console.log("fileRefs", fileRefs);
+  const formData = new FormData();
+  fileRefs.forEach((ref, index) => {
+    console.log("working on ref ", ref);
+    console.log("ref.current", ref.current);
+    console.log("ref.current?.files", ref.current?.files);
+    if (ref.current?.files) {
+      Array.from(ref.current.files).forEach((file) => {
+        formData.append(`file`, file);
+        console.log(index);
+        console.log("file", file);
+      });
+    }
+  });
+
+  if (Array.from(formData.values()).length === 0) {
+    throw new Error("No files selected");
   }
-  const file = inputFileRef.current.files[0];
-  if (!metadataRef.current?.value) {
-    metadataRef.current = null;
-  }
+
   const tagString = metadataRef.current?.value;
-  let filename = file.name;
+  const uploadedBlobs: PutBlobResult[] = [];
+
+  let filename = null;
   if (filenameRef.current?.value) {
     filename = filenameRef.current.value;
   }
@@ -97,12 +141,15 @@ async function sendUpload(
   console.log("inpage, sending url: ", url);
   const response = await fetch(url, {
     method: "POST",
-    body: file,
+    body: formData,
   });
-  console.log("got response, ", response);
 
-  const newBlob = (await response.json()) as PutBlobResult;
-  console.log("newBlob", JSON.stringify(newBlob));
+  if (!response.ok) {
+    throw new Error("Failed to upload file");
+  }
   console.log(setMetedataBlob);
-  setImageBlob(newBlob);
+  return;
+  const newBlob = (await response.json()) as PutBlobResult;
+  console.log(JSON.stringify(newBlob));
+  setImageBlobs(uploadedBlobs);
 }

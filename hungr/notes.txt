@@ -1,0 +1,3 @@
+Todo: fix the file_tags table to refer to recipe id not file id
+actually allow multiple uploads
+figure out the key generation for automatically generated tables and get the old data in maybe
