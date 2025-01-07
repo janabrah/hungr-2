@@ -14,7 +14,9 @@ const supabase = createClient(
 export async function POST(request: Request): Promise<NextResponse> {
   const { searchParams } = new URL(request.url);
   const formData = await request.formData();
+  console.log("formData", formData);
   const files = formData.getAll("file");
+  console.log("files", files);
   const filename = searchParams.get("filename");
   console.log("filename", filename);
   const tagString = searchParams.get("tagString");
@@ -23,10 +25,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     throw "filename is required";
   }
   const images = await sendImages(filename, files);
+  console.log("images", images, JSON.stringify(images));
   const imagesJson = await images.json();
+  console.log("imagesJson", imagesJson, JSON.stringify(imagesJson));
   const imageBlobs = imagesJson.map((image: PutBlobResult) => image.url);
   console.log("imageblob", imageBlobs, JSON.stringify(imageBlobs));
-  const metadata = await sendMetadata(filename, tagString, [imageBlobs.url]);
+  const metadata = await sendMetadata(filename, tagString, imageBlobs);
   return NextResponse.json({ images, metadata });
 }
 
@@ -96,9 +100,12 @@ async function sendImages(
 ): Promise<NextResponse> {
   console.log("sending image");
   if (imageBypass) {
+    console.log("bypassing image");
     return NextResponse.json(null);
+  } else {
+    console.log("not bypassing image");
   }
-  // ⚠️ The below code is for App Router Route Handlers only
+  console.log("files is", files, JSON.stringify(files));
   const blobs = [];
   let pageNum = 0;
   for (const file of files) {
@@ -125,11 +132,14 @@ async function sendMetadata(
   console.log("in sendmetadata, tags", tags);
 
   try {
+    console.log("sending recipe: " + filename + " with tags: " + tags);
     const recipe = await writeToTable("recipes", {
       filename,
       user_id: 1,
       tag_string: tags,
     });
+    console.log("sending urls + " + imageUrls);
+    console.log("sending urls (JSON) + " + JSON.stringify(imageUrls));
 
     const files = [];
     for (const imageUrl of imageUrls) {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { PutBlobResult } from "@vercel/blob";
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 
 export default function AvatarUploadPage() {
   const [fileInputs, setFileInputs] = useState([
@@ -17,11 +17,15 @@ export default function AvatarUploadPage() {
   const newRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (index: number) => {
+    console.log("in handlefilechange, index", index);
     if (index === fileInputs.length - 1) {
-      setFileInputs([
-        ...fileInputs,
-        { id: fileInputs.length + 1, ref: newRef },
+      console.log("landed in if, newRef is", newRef);
+      setFileInputs((prevInputs) => [
+        ...prevInputs,
+        { id: prevInputs.length + 1, ref: React.createRef<HTMLInputElement>() },
       ]);
+    } else {
+      console.log("landed in else, newRef is", newRef);
     }
   };
 
@@ -32,6 +36,10 @@ export default function AvatarUploadPage() {
     event.preventDefault();
     setIsSubmitted(true);
     try {
+      console.log("sending upload");
+      console.log("metadataRef", metadataRef);
+      console.log("filenameRef", filenameRef);
+      console.log("fileInputs", fileInputs);
       await sendUpload(
         fileInputs.map((input) => input.ref),
         setImageBlobs,
@@ -101,11 +109,17 @@ async function sendUpload(
   setMetedataBlob: React.Dispatch<React.SetStateAction<PutBlobResult | null>>,
   filenameRef: React.RefObject<HTMLInputElement | null>
 ) {
+  console.log("fileRefs", fileRefs);
   const formData = new FormData();
   fileRefs.forEach((ref, index) => {
+    console.log("working on ref ", ref);
+    console.log("ref.current", ref.current);
+    console.log("ref.current?.files", ref.current?.files);
     if (ref.current?.files) {
       Array.from(ref.current.files).forEach((file) => {
-        formData.append(`file-${index}`, file);
+        formData.append(`file`, file);
+        console.log(index);
+        console.log("file", file);
       });
     }
   });
