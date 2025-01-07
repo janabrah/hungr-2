@@ -71,7 +71,7 @@ async function getImageOptions(
   console.log("recipeData was: " + JSON.stringify(recipeData));
   const recipeIds = recipeData.map((recipe) => recipe.id);
   const { data: mappingData, error: mappingError } = await supabase
-    .from("file_recipes_temp")
+    .from("file_recipes")
     .select("file_id, recipe_id")
     .in("recipe_id", recipeIds)
     .range(0, 10000);
@@ -82,7 +82,7 @@ async function getImageOptions(
   console.log("mappingData was: " + JSON.stringify(mappingData));
   const fileIds = mappingData.map((mapping) => mapping.file_id);
   const { data: fileData, error: fileError } = await supabase
-    .from("files_temp")
+    .from("files")
     .select("id, url")
     .in("id", fileIds)
     .range(0, 10000);
@@ -143,7 +143,7 @@ async function sendMetadata(
 
     const files = [];
     for (const imageUrl of imageUrls) {
-      const file = await writeToTable("files_temp", {
+      const file = await writeToTable("files", {
         url: imageUrl,
         image: true,
       });
@@ -158,7 +158,7 @@ async function sendMetadata(
     }));
 
     const recipeFileLinks = await writeToTable(
-      "file_recipes_temp",
+      "file_recipes",
       fileIdPayload,
       false
     );
