@@ -15,11 +15,13 @@ type Recipe struct {
 }
 
 type File struct {
-	UUID       uuid.UUID `json:"uuid"`
-	RecipeUUID uuid.UUID `json:"recipe_uuid"`
-	URL        string    `json:"url"`
-	PageNumber int       `json:"page_number"`
-	Image      bool      `json:"image"`
+	UUID        uuid.UUID `json:"uuid"`
+	RecipeUUID  uuid.UUID `json:"recipe_uuid"`
+	URL         string    `json:"url"`
+	PageNumber  int       `json:"page_number"`
+	Image       bool      `json:"image"`
+	ContentType string    `json:"-"`
+	Data        []byte    `json:"-"`
 }
 
 type Tag struct {

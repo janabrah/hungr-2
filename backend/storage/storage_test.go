@@ -96,7 +96,8 @@ func TestInsertAndGetFile(t *testing.T) {
 		t.Fatalf("InsertRecipe failed: %v", err)
 	}
 
-	file, err := InsertFile(recipe.UUID, "https://example.com/test.jpg", 0, true)
+	testData := []byte("fake image data")
+	file, err := InsertFile(recipe.UUID, testData, "image/jpeg", 0, true)
 	if err != nil {
 		t.Fatalf("InsertFile failed: %v", err)
 	}
@@ -104,11 +105,19 @@ func TestInsertAndGetFile(t *testing.T) {
 	if file == nil {
 		t.Fatal("Expected file, got nil")
 	}
-	if file.URL != "https://example.com/test.jpg" {
-		t.Errorf("Expected URL 'https://example.com/test.jpg', got %q", file.URL)
-	}
 	if file.RecipeUUID != recipe.UUID {
 		t.Errorf("Expected recipe UUID %v, got %v", recipe.UUID, file.RecipeUUID)
+	}
+
+	data, contentType, err := GetFileData(file.UUID)
+	if err != nil {
+		t.Fatalf("GetFileData failed: %v", err)
+	}
+	if string(data) != string(testData) {
+		t.Errorf("Expected data %q, got %q", testData, data)
+	}
+	if contentType != "image/jpeg" {
+		t.Errorf("Expected content type 'image/jpeg', got %q", contentType)
 	}
 
 	files, err := GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
@@ -155,7 +164,7 @@ func TestMultipleFilesPerRecipe(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		_, err := InsertFile(recipe.UUID, "https://example.com/page.jpg", i, true)
+		_, err := InsertFile(recipe.UUID, []byte("page data"), "image/jpeg", i, true)
 		if err != nil {
 			t.Fatalf("InsertFile failed: %v", err)
 		}

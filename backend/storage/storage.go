@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"io"
 
 	"github.com/cobyabrahams/hungr/models"
 	"github.com/gofrs/uuid"
@@ -79,17 +78,38 @@ func InsertRecipe(name string, user uuid.UUID, tagString string) (*models.Recipe
 	return &r, nil
 }
 
-func InsertFile(recipeUUID uuid.UUID, url string, pageNumber int, isImage bool) (*models.File, error) {
+func InsertFile(recipeUUID uuid.UUID, data []byte, contentType string, pageNumber int, isImage bool) (*models.File, error) {
 	var f models.File
+	var fileUUID uuid.UUID
 	err := db.QueryRow(context.Background(),
-		`INSERT INTO files (recipe_uuid, url, page_number, image)
-		 VALUES ($1, $2, $3, $4)
-		 RETURNING uuid, recipe_uuid, url, page_number, image`,
-		recipeUUID, url, pageNumber, isImage).Scan(&f.UUID, &f.RecipeUUID, &f.URL, &f.PageNumber, &f.Image)
+		`INSERT INTO files (recipe_uuid, data, content_type, url, page_number, image)
+		 VALUES ($1, $2, $3, '', $4, $5)
+		 RETURNING uuid, recipe_uuid, page_number, image`,
+		recipeUUID, data, contentType, pageNumber, isImage).Scan(&fileUUID, &f.RecipeUUID, &f.PageNumber, &f.Image)
+	if err != nil {
+		return nil, err
+	}
+	f.UUID = fileUUID
+	f.URL = fmt.Sprintf("/api/files/%s", fileUUID.String())
+	f.Image = isImage
+
+	_, err = db.Exec(context.Background(),
+		`UPDATE files SET url = $1 WHERE uuid = $2`, f.URL, fileUUID)
 	if err != nil {
 		return nil, err
 	}
 	return &f, nil
+}
+
+func GetFileData(fileUUID uuid.UUID) ([]byte, string, error) {
+	var data []byte
+	var contentType string
+	err := db.QueryRow(context.Background(),
+		`SELECT data, content_type FROM files WHERE uuid = $1`, fileUUID).Scan(&data, &contentType)
+	if err != nil {
+		return nil, "", err
+	}
+	return data, contentType, nil
 }
 
 func UpsertTag(tagUUID uuid.UUID, name string) (*models.Tag, error) {
@@ -110,12 +130,6 @@ func InsertRecipeTag(recipeUUID, tagUUID uuid.UUID) error {
 		`INSERT INTO recipe_tags (recipe_uuid, tag_uuid) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
 		recipeUUID, tagUUID)
 	return err
-}
-
-func UploadFile(filename string, file io.Reader) (string, error) {
-	// For now, return a placeholder URL
-	// TODO: Implement actual file storage (S3, local disk, etc.)
-	return fmt.Sprintf("/uploads/%s", filename), nil
 }
 
 func CreateTagUUID(tag string) uuid.UUID {

@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/cobyabrahams/hungr/storage"
@@ -14,47 +16,47 @@ var testUserUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-1111111111
 var recipes = []struct {
 	name     string
 	tags     string
-	fileURLs []string
+	imageURLs []string
 }{
 	{
-		name:     "Grandma's Chocolate Chip Cookies",
-		tags:     "dessert, cookies, baking",
-		fileURLs: []string{"https://picsum.photos/seed/cookies1/800/600", "https://picsum.photos/seed/cookies2/800/600"},
+		name:      "Grandma's Chocolate Chip Cookies",
+		tags:      "dessert, cookies, baking",
+		imageURLs: []string{"https://picsum.photos/seed/cookies1/800/600", "https://picsum.photos/seed/cookies2/800/600"},
 	},
 	{
-		name:     "Quick Weeknight Pasta",
-		tags:     "dinner, pasta, quick",
-		fileURLs: []string{"https://picsum.photos/seed/pasta/800/600"},
+		name:      "Quick Weeknight Pasta",
+		tags:      "dinner, pasta, quick",
+		imageURLs: []string{"https://picsum.photos/seed/pasta/800/600"},
 	},
 	{
-		name:     "Sunday Morning Pancakes",
-		tags:     "breakfast, pancakes",
-		fileURLs: []string{"https://picsum.photos/seed/pancakes1/800/600", "https://picsum.photos/seed/pancakes2/800/600", "https://picsum.photos/seed/pancakes3/800/600"},
+		name:      "Sunday Morning Pancakes",
+		tags:      "breakfast, pancakes",
+		imageURLs: []string{"https://picsum.photos/seed/pancakes1/800/600", "https://picsum.photos/seed/pancakes2/800/600", "https://picsum.photos/seed/pancakes3/800/600"},
 	},
 	{
-		name:     "Spicy Thai Curry",
-		tags:     "dinner, thai, spicy",
-		fileURLs: []string{"https://picsum.photos/seed/curry/800/600"},
+		name:      "Spicy Thai Curry",
+		tags:      "dinner, thai, spicy",
+		imageURLs: []string{"https://picsum.photos/seed/curry/800/600"},
 	},
 	{
-		name:     "Garden Salad",
-		tags:     "lunch, salad, healthy, quick",
-		fileURLs: []string{"https://picsum.photos/seed/salad/800/600"},
+		name:      "Garden Salad",
+		tags:      "lunch, salad, healthy, quick",
+		imageURLs: []string{"https://picsum.photos/seed/salad/800/600"},
 	},
 	{
-		name:     "Homemade Pizza Dough",
-		tags:     "dinner, pizza, baking",
-		fileURLs: []string{"https://picsum.photos/seed/pizza1/800/600", "https://picsum.photos/seed/pizza2/800/600"},
+		name:      "Homemade Pizza Dough",
+		tags:      "dinner, pizza, baking",
+		imageURLs: []string{"https://picsum.photos/seed/pizza1/800/600", "https://picsum.photos/seed/pizza2/800/600"},
 	},
 	{
-		name:     "Beef Stew",
-		tags:     "dinner, soup, comfort food",
-		fileURLs: []string{"https://picsum.photos/seed/stew/800/600"},
+		name:      "Beef Stew",
+		tags:      "dinner, soup, comfort food",
+		imageURLs: []string{"https://picsum.photos/seed/stew/800/600"},
 	},
 	{
-		name:     "Avocado Toast",
-		tags:     "breakfast, quick, healthy",
-		fileURLs: []string{"https://picsum.photos/seed/avocado/800/600"},
+		name:      "Avocado Toast",
+		tags:      "breakfast, quick, healthy",
+		imageURLs: []string{"https://picsum.photos/seed/avocado/800/600"},
 	},
 }
 
@@ -78,14 +80,20 @@ func main() {
 		}
 		fmt.Printf("  Created recipe: %s\n", r.name)
 
-		for i, url := range r.fileURLs {
-			_, err := storage.InsertFile(recipe.UUID, url, i, true)
+		for i, url := range r.imageURLs {
+			data, contentType, err := fetchImage(url)
+			if err != nil {
+				log.Printf("    Failed to fetch image %s: %v", url, err)
+				continue
+			}
+
+			_, err = storage.InsertFile(recipe.UUID, data, contentType, i, true)
 			if err != nil {
 				log.Printf("    Failed to insert file: %v", err)
 				continue
 			}
 		}
-		fmt.Printf("    Added %d file(s)\n", len(r.fileURLs))
+		fmt.Printf("    Added %d file(s)\n", len(r.imageURLs))
 
 		tags := splitTags(r.tags)
 		for _, tagName := range tags {
@@ -102,6 +110,26 @@ func main() {
 	}
 
 	fmt.Printf("\nDone! Test user UUID: %s\n", testUserUUID)
+}
+
+func fetchImage(url string) ([]byte, string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, "", err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", err
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/jpeg"
+	}
+
+	return data, contentType, nil
 }
 
 func splitTags(tagString string) []string {

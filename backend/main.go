@@ -22,6 +22,7 @@ func main() {
 
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/api/recipes", handleRecipes)
+	http.HandleFunc("/api/files/", handleFiles)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -49,6 +50,16 @@ func handleRecipes(w http.ResponseWriter, r *http.Request) {
 	case "OPTIONS":
 		w.WriteHeader(http.StatusOK)
 	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleFiles(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method == "GET" {
+		handlers.GetFile(w, r)
+	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }

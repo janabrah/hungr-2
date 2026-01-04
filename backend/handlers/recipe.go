@@ -2,8 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/cobyabrahams/hungr/models"
@@ -81,34 +81,34 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var uploadedURLs []string
-	for i, fileHeader := range files {
-		file, err := fileHeader.Open()
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "failed to open file: "+err.Error())
-			return
-		}
-		defer file.Close()
-
-		uploadName := name + strconv.Itoa(i+1)
-		url, err := storage.UploadFile(uploadName, file)
-		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "failed to upload file: "+err.Error())
-			return
-		}
-		uploadedURLs = append(uploadedURLs, url)
-	}
-
 	recipe, err := storage.InsertRecipe(name, userUUID, tagString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to create recipe: "+err.Error())
 		return
 	}
 
-	for i, url := range uploadedURLs {
-		_, err := storage.InsertFile(recipe.UUID, url, i, true)
+	for i, fileHeader := range files {
+		file, err := fileHeader.Open()
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "failed to create file record: "+err.Error())
+			respondWithError(w, http.StatusInternalServerError, "failed to open file: "+err.Error())
+			return
+		}
+
+		data, err := io.ReadAll(file)
+		file.Close()
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "failed to read file: "+err.Error())
+			return
+		}
+
+		contentType := fileHeader.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "image/jpeg"
+		}
+
+		_, err = storage.InsertFile(recipe.UUID, data, contentType, i, true)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "failed to store file: "+err.Error())
 			return
 		}
 	}
@@ -145,6 +145,32 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func GetFile(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	if len(parts) < 3 {
+		respondWithError(w, http.StatusBadRequest, "invalid file path")
+		return
+	}
+	fileUUIDStr := parts[len(parts)-1]
+
+	fileUUID, err := uuid.FromString(fileUUIDStr)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid file uuid")
+		return
+	}
+
+	data, contentType, err := storage.GetFileData(fileUUID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "file not found")
+		return
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Write(data)
 }
 
 func respondWithError(w http.ResponseWriter, code int, message string) {
