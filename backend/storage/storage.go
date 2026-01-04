@@ -6,16 +6,16 @@ import (
 
 	"github.com/cobyabrahams/hungr/models"
 	"github.com/gofrs/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var db *pgx.Conn
+var db *pgxpool.Pool
 
 const tagNamespace = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 
 func Init(connString string) error {
 	var err error
-	db, err = pgx.Connect(context.Background(), connString)
+	db, err = pgxpool.New(context.Background(), connString)
 	return err
 }
 

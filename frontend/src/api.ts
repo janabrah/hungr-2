@@ -1,6 +1,10 @@
 import type { RecipesResponse, UploadResponse } from './types.gen'
 
-const API_BASE = 'http://localhost:8080'
+export const API_BASE = 'http://localhost:8080'
+
+export function getFileURL(path: string): string {
+  return `${API_BASE}${path}`
+}
 
 export async function getRecipes(userUUID: string): Promise<RecipesResponse> {
   const response = await fetch(`${API_BASE}/api/recipes?user_uuid=${encodeURIComponent(userUUID)}`)

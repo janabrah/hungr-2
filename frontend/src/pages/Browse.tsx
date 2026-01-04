@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getRecipes } from '../api'
+import { getRecipes, getFileURL } from '../api'
 import type { Recipe, File } from '../types.gen'
 
 const USER_UUID = '11111111-1111-1111-1111-111111111111'
@@ -10,12 +10,30 @@ type Props = {
 
 type RecipeWithFiles = Recipe & { files: File[] }
 
+function getParams(): { tag: string; recipe: string } {
+  const params = new URLSearchParams(window.location.search)
+  return {
+    tag: params.get('tag') ?? '',
+    recipe: params.get('recipe') ?? '',
+  }
+}
+
+function setParams(tag: string, recipe: string) {
+  const params = new URLSearchParams()
+  if (tag !== '') params.set('tag', tag)
+  if (recipe !== '') params.set('recipe', recipe)
+  const search = params.toString()
+  const url = search === '' ? '/browse' : `/browse?${search}`
+  window.history.replaceState(null, '', url)
+}
+
 export function Browse({ onNavigate }: Props) {
+  const initialParams = getParams()
   const [recipes, setRecipes] = useState<RecipeWithFiles[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeWithFiles | null>(null)
-  const [tagFilter, setTagFilter] = useState('')
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string>(initialParams.recipe)
+  const [tagFilter, setTagFilter] = useState(initialParams.tag)
 
   useEffect(() => {
     getRecipes(USER_UUID)
@@ -36,16 +54,24 @@ export function Browse({ onNavigate }: Props) {
       })
   }, [])
 
+  useEffect(() => {
+    setParams(tagFilter, selectedRecipeId)
+  }, [tagFilter, selectedRecipeId])
+
   const filteredRecipes = tagFilter === ''
     ? recipes
     : recipes.filter((r) =>
         r.tag_string.toLowerCase().includes(tagFilter.toLowerCase())
       )
 
+  const selectedRecipe = recipes.find((r) => r.uuid === selectedRecipeId) ?? null
+
   const handleSelectRecipe = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const uuid = event.target.value
-    const recipe = recipes.find((r) => r.uuid === uuid)
-    setSelectedRecipe(recipe ?? null)
+    setSelectedRecipeId(event.target.value)
+  }
+
+  const handleTagChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setTagFilter(event.target.value)
   }
 
   return (
@@ -65,14 +91,14 @@ export function Browse({ onNavigate }: Props) {
           className="input"
           style={{ marginBottom: 0 }}
           value={tagFilter}
-          onChange={(e) => { setTagFilter(e.target.value) }}
+          onChange={handleTagChange}
         />
       </div>
 
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <select className="select" onChange={handleSelectRecipe} defaultValue="">
+        <select className="select" onChange={handleSelectRecipe} value={selectedRecipeId}>
           <option value="" disabled>
             Select a recipe
           </option>
@@ -91,7 +117,7 @@ export function Browse({ onNavigate }: Props) {
           {selectedRecipe.files.map((file) => (
             <img
               key={file.uuid}
-              src={file.url}
+              src={getFileURL(file.url)}
               alt={`${selectedRecipe.name} page ${String(file.page_number + 1)}`}
               className="recipe-image"
             />
