@@ -1,7 +1,7 @@
 include .env
 export
 
-.PHONY: build run test test-v clean fmt vet lint help migrate-up migrate-down migrate-status migrate-create db-create db-drop test-db-create test-db-drop seed
+.PHONY: build run test test-v clean fmt vet lint help migrate-up migrate-down migrate-status migrate-create db-create db-drop test-db-create test-db-drop seed types
 
 build:
 	go build -o bin/server .
@@ -74,6 +74,9 @@ migrate-create:
 seed:
 	go run ./cmd/seed
 
+types:
+	tygo generate
+
 help:
 	@echo "build      Build the binary"
 	@echo "run        Run the server"
@@ -96,3 +99,4 @@ help:
 	@echo "migrate-status Show migration status"
 	@echo "migrate-create Create migration (NAME=name)"
 	@echo "seed           Populate DB with test data"
+	@echo "types          Generate TypeScript types from Go"

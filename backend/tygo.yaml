@@ -1,0 +1,6 @@
+packages:
+  - path: "github.com/cobyabrahams/hungr/models"
+    output_path: "../frontend/src/types.gen.ts"
+    type_mappings:
+      "uuid.UUID": "string"
+      "time.Time": "string"
