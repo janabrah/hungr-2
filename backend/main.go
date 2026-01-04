@@ -4,19 +4,30 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/cobyabrahams/hungr/handlers"
+	"github.com/cobyabrahams/hungr/storage"
 )
 
 func main() {
-	// TODO: Load environment variables (SUPABASE_URL, SUPABASE_SERVICE_KEY)
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL must be set")
+	}
 
-	// TODO: Initialize Supabase client
+	if err := storage.Init(dbURL); err != nil {
+		log.Fatal("Failed to connect to database: ", err)
+	}
 
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/api/recipes", handleRecipes)
 
-	port := "8080"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	fmt.Printf("Server starting on :%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -26,13 +37,16 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRecipes(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
 	switch r.Method {
 	case "GET":
 		handlers.GetRecipes(w, r)
 	case "POST":
 		handlers.CreateRecipe(w, r)
 	case "OPTIONS":
-		// TODO: Handle CORS preflight
 		w.WriteHeader(http.StatusOK)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
