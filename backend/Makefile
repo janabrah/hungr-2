@@ -1,7 +1,7 @@
 include .env
 export
 
-.PHONY: build run test test-v clean fmt vet lint help migrate-up migrate-down migrate-status migrate-create db-create db-drop test-db-create test-db-drop
+.PHONY: build run test test-v clean fmt vet lint help migrate-up migrate-down migrate-status migrate-create db-create db-drop test-db-create test-db-drop seed
 
 build:
 	go build -o bin/server .
@@ -71,6 +71,9 @@ migrate-status:
 migrate-create:
 	goose -dir migrations create $(NAME) sql
 
+seed:
+	go run ./cmd/seed
+
 help:
 	@echo "build      Build the binary"
 	@echo "run        Run the server"
@@ -92,3 +95,4 @@ help:
 	@echo "migrate-down   Rollback one migration"
 	@echo "migrate-status Show migration status"
 	@echo "migrate-create Create migration (NAME=name)"
+	@echo "seed           Populate DB with test data"
