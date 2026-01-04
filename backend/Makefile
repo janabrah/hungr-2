@@ -71,6 +71,15 @@ migrate-status:
 migrate-create:
 	goose -dir migrations create $(NAME) sql
 
+migrate-prod-up:
+	goose -dir migrations postgres "$(DATABASE_URL_PROD)" up
+
+migrate-prod-down:
+	goose -dir migrations postgres "$(DATABASE_URL_PROD)" down
+
+migrate-prod-status:
+	goose -dir migrations postgres "$(DATABASE_URL_PROD)" status
+
 seed:
 	go run ./cmd/seed
 
@@ -94,9 +103,12 @@ help:
 	@echo "check      fmt + vet + test"
 	@echo "db-create       Create hungr_db database"
 	@echo "db-drop         Drop hungr_db database"
-	@echo "migrate-up     Run migrations"
-	@echo "migrate-down   Rollback one migration"
-	@echo "migrate-status Show migration status"
-	@echo "migrate-create Create migration (NAME=name)"
-	@echo "seed           Populate DB with test data"
-	@echo "types          Generate TypeScript types from Go"
+	@echo "migrate-up          Run migrations (local)"
+	@echo "migrate-down        Rollback one migration (local)"
+	@echo "migrate-status      Show migration status (local)"
+	@echo "migrate-create      Create migration (NAME=name)"
+	@echo "migrate-prod-up     Run migrations (production)"
+	@echo "migrate-prod-down   Rollback one migration (production)"
+	@echo "migrate-prod-status Show migration status (production)"
+	@echo "seed                Populate DB with test data"
+	@echo "types               Generate TypeScript types from Go"
