@@ -1,4 +1,7 @@
-.PHONY: build run test test-v clean fmt vet lint help db-up db-down db-logs
+include .env
+export
+
+.PHONY: build run test test-v clean fmt vet lint help migrate-up migrate-down migrate-status migrate-create db-create db-drop test-db-create test-db-drop
 
 build:
 	go build -o bin/server .
@@ -6,11 +9,11 @@ build:
 run:
 	go run .
 
-test:
-	go test ./...
+test: test-db-create
+	DATABASE_URL=$(DATABASE_URL_TEST) go test ./...
 
-test-v:
-	go test -v ./...
+test-v: test-db-create
+	DATABASE_URL=$(DATABASE_URL_TEST) go test -v ./...
 
 test-pkg:
 	go test -v ./$(PKG)/...
@@ -42,14 +45,31 @@ dev: build
 
 check: fmt vet test
 
-db-up:
-	docker compose up -d
+db-create:
+	createdb hungr_db
 
-db-down:
-	docker compose down
+db-drop:
+	dropdb hungr_db
 
-db-logs:
-	docker compose logs -f
+test-db-create:
+	dropdb --if-exists hungr_db_test
+	createdb hungr_db_test
+	goose -dir migrations postgres "$(DATABASE_URL_TEST)" up
+
+test-db-drop:
+	dropdb --if-exists hungr_db_test
+
+migrate-up:
+	goose -dir migrations postgres "$(DATABASE_URL)" up
+
+migrate-down:
+	goose -dir migrations postgres "$(DATABASE_URL)" down
+
+migrate-status:
+	goose -dir migrations postgres "$(DATABASE_URL)" status
+
+migrate-create:
+	goose -dir migrations create $(NAME) sql
 
 help:
 	@echo "build      Build the binary"
@@ -66,6 +86,9 @@ help:
 	@echo "deps       Download dependencies"
 	@echo "dev        Build and run"
 	@echo "check      fmt + vet + test"
-	@echo "db-up      Start local postgres"
-	@echo "db-down    Stop local postgres"
-	@echo "db-logs    Tail postgres logs"
+	@echo "db-create       Create hungr_db database"
+	@echo "db-drop         Drop hungr_db database"
+	@echo "migrate-up     Run migrations"
+	@echo "migrate-down   Rollback one migration"
+	@echo "migrate-status Show migration status"
+	@echo "migrate-create Create migration (NAME=name)"

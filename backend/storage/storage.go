@@ -22,7 +22,7 @@ func Init(connString string) error {
 
 func GetRecipesByUserUUID(userUUID uuid.UUID) ([]models.Recipe, error) {
 	rows, err := db.Query(context.Background(),
-		`SELECT uuid, filename, user_uuid, tag_string, created_at
+		`SELECT uuid, name, user_uuid, tag_string, created_at
 		 FROM recipes WHERE user_uuid = $1
 		 ORDER BY created_at DESC LIMIT 100`, userUUID)
 	if err != nil {
@@ -30,10 +30,10 @@ func GetRecipesByUserUUID(userUUID uuid.UUID) ([]models.Recipe, error) {
 	}
 	defer rows.Close()
 
-	var recipes []models.Recipe
+	recipes := []models.Recipe{}
 	for rows.Next() {
 		var r models.Recipe
-		if err := rows.Scan(&r.UUID, &r.Filename, &r.User, &r.TagString, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt); err != nil {
 			return nil, err
 		}
 		recipes = append(recipes, r)
@@ -41,37 +41,15 @@ func GetRecipesByUserUUID(userUUID uuid.UUID) ([]models.Recipe, error) {
 	return recipes, rows.Err()
 }
 
-func GetFileMappingsByRecipeUUIDs(recipeUUIDs []uuid.UUID) ([]models.FileRecipe, error) {
+func GetFilesByRecipeUUIDs(recipeUUIDs []uuid.UUID) ([]models.File, error) {
 	if len(recipeUUIDs) == 0 {
-		return []models.FileRecipe{}, nil
-	}
-
-	rows, err := db.Query(context.Background(),
-		`SELECT file_uuid, recipe_uuid, page_number
-		 FROM file_recipes WHERE recipe_uuid = ANY($1)`, recipeUUIDs)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var mappings []models.FileRecipe
-	for rows.Next() {
-		var m models.FileRecipe
-		if err := rows.Scan(&m.FileUUID, &m.RecipeUUID, &m.PageNumber); err != nil {
-			return nil, err
-		}
-		mappings = append(mappings, m)
-	}
-	return mappings, rows.Err()
-}
-
-func GetFilesByUUIDs(fileUUIDs []uuid.UUID) ([]models.File, error) {
-	if len(fileUUIDs) == 0 {
 		return []models.File{}, nil
 	}
 
 	rows, err := db.Query(context.Background(),
-		`SELECT uuid, url, image FROM files WHERE uuid = ANY($1)`, fileUUIDs)
+		`SELECT uuid, recipe_uuid, url, page_number, image
+		 FROM files WHERE recipe_uuid = ANY($1)
+		 ORDER BY page_number`, recipeUUIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +58,7 @@ func GetFilesByUUIDs(fileUUIDs []uuid.UUID) ([]models.File, error) {
 	var files []models.File
 	for rows.Next() {
 		var f models.File
-		if err := rows.Scan(&f.UUID, &f.URL, &f.Image); err != nil {
+		if err := rows.Scan(&f.UUID, &f.RecipeUUID, &f.URL, &f.PageNumber, &f.Image); err != nil {
 			return nil, err
 		}
 		files = append(files, f)
@@ -88,35 +66,30 @@ func GetFilesByUUIDs(fileUUIDs []uuid.UUID) ([]models.File, error) {
 	return files, rows.Err()
 }
 
-func InsertRecipe(filename string, user uuid.UUID, tagString string) (*models.Recipe, error) {
+func InsertRecipe(name string, user uuid.UUID, tagString string) (*models.Recipe, error) {
 	var r models.Recipe
 	err := db.QueryRow(context.Background(),
-		`INSERT INTO recipes (filename, user_uuid, tag_string)
+		`INSERT INTO recipes (name, user_uuid, tag_string)
 		 VALUES ($1, $2, $3)
-		 RETURNING uuid, filename, user_uuid, tag_string, created_at`,
-		filename, user, tagString).Scan(&r.UUID, &r.Filename, &r.User, &r.TagString, &r.CreatedAt)
+		 RETURNING uuid, name, user_uuid, tag_string, created_at`,
+		name, user, tagString).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &r, nil
 }
 
-func InsertFile(url string, isImage bool) (*models.File, error) {
+func InsertFile(recipeUUID uuid.UUID, url string, pageNumber int, isImage bool) (*models.File, error) {
 	var f models.File
 	err := db.QueryRow(context.Background(),
-		`INSERT INTO files (url, image) VALUES ($1, $2) RETURNING uuid, url, image`,
-		url, isImage).Scan(&f.UUID, &f.URL, &f.Image)
+		`INSERT INTO files (recipe_uuid, url, page_number, image)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING uuid, recipe_uuid, url, page_number, image`,
+		recipeUUID, url, pageNumber, isImage).Scan(&f.UUID, &f.RecipeUUID, &f.URL, &f.PageNumber, &f.Image)
 	if err != nil {
 		return nil, err
 	}
 	return &f, nil
-}
-
-func InsertFileRecipe(fileUUID, recipeUUID uuid.UUID, pageNumber int) error {
-	_, err := db.Exec(context.Background(),
-		`INSERT INTO file_recipes (file_uuid, recipe_uuid, page_number) VALUES ($1, $2, $3)`,
-		fileUUID, recipeUUID, pageNumber)
-	return err
 }
 
 func UpsertTag(tagUUID uuid.UUID, name string) (*models.Tag, error) {

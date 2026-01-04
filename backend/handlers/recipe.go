@@ -35,27 +35,15 @@ func GetRecipes(w http.ResponseWriter, r *http.Request) {
 		recipeUUIDs[i] = r.UUID
 	}
 
-	mappings, err := storage.GetFileMappingsByRecipeUUIDs(recipeUUIDs)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	fileUUIDs := make([]uuid.UUID, len(mappings))
-	for i, m := range mappings {
-		fileUUIDs[i] = m.FileUUID
-	}
-
-	files, err := storage.GetFilesByUUIDs(fileUUIDs)
+	files, err := storage.GetFilesByRecipeUUIDs(recipeUUIDs)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	response := models.RecipesResponse{
-		RecipeData:  recipes,
-		FileData:    files,
-		MappingData: mappings,
+		RecipeData: recipes,
+		FileData:   files,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -63,9 +51,9 @@ func GetRecipes(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateRecipe(w http.ResponseWriter, r *http.Request) {
-	filename := r.URL.Query().Get("filename")
-	if filename == "" {
-		respondWithError(w, http.StatusBadRequest, "filename is required")
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		respondWithError(w, http.StatusBadRequest, "name is required")
 		return
 	}
 
@@ -102,7 +90,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		uploadName := filename + strconv.Itoa(i+1)
+		uploadName := name + strconv.Itoa(i+1)
 		url, err := storage.UploadFile(uploadName, file)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "failed to upload file: "+err.Error())
@@ -111,21 +99,16 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		uploadedURLs = append(uploadedURLs, url)
 	}
 
-	recipe, err := storage.InsertRecipe(filename, userUUID, tagString)
+	recipe, err := storage.InsertRecipe(name, userUUID, tagString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to create recipe: "+err.Error())
 		return
 	}
 
 	for i, url := range uploadedURLs {
-		fileRecord, err := storage.InsertFile(url, true)
+		_, err := storage.InsertFile(recipe.UUID, url, i, true)
 		if err != nil {
 			respondWithError(w, http.StatusInternalServerError, "failed to create file record: "+err.Error())
-			return
-		}
-
-		if err := storage.InsertFileRecipe(fileRecord.UUID, recipe.UUID, i); err != nil {
-			respondWithError(w, http.StatusInternalServerError, "failed to link file to recipe: "+err.Error())
 			return
 		}
 	}

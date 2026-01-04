@@ -79,8 +79,8 @@ func TestInsertRecipe(t *testing.T) {
 	if recipe == nil {
 		t.Fatal("Expected recipe, got nil")
 	}
-	if recipe.Filename != "test-recipe" {
-		t.Errorf("Expected filename 'test-recipe', got %q", recipe.Filename)
+	if recipe.Name != "test-recipe" {
+		t.Errorf("Expected name 'test-recipe', got %q", recipe.Name)
 	}
 	if recipe.UUID == uuid.Nil {
 		t.Error("Expected non-nil UUID")
@@ -90,7 +90,13 @@ func TestInsertRecipe(t *testing.T) {
 func TestInsertAndGetFile(t *testing.T) {
 	skipIfNoDatabase(t)
 
-	file, err := InsertFile("https://example.com/test.jpg", true)
+	userUUID := uuid.Must(uuid.NewV4())
+	recipe, err := InsertRecipe("file-test", userUUID, "test")
+	if err != nil {
+		t.Fatalf("InsertRecipe failed: %v", err)
+	}
+
+	file, err := InsertFile(recipe.UUID, "https://example.com/test.jpg", 0, true)
 	if err != nil {
 		t.Fatalf("InsertFile failed: %v", err)
 	}
@@ -101,10 +107,13 @@ func TestInsertAndGetFile(t *testing.T) {
 	if file.URL != "https://example.com/test.jpg" {
 		t.Errorf("Expected URL 'https://example.com/test.jpg', got %q", file.URL)
 	}
+	if file.RecipeUUID != recipe.UUID {
+		t.Errorf("Expected recipe UUID %v, got %v", recipe.UUID, file.RecipeUUID)
+	}
 
-	files, err := GetFilesByUUIDs([]uuid.UUID{file.UUID})
+	files, err := GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
 	if err != nil {
-		t.Fatalf("GetFilesByUUIDs failed: %v", err)
+		t.Fatalf("GetFilesByRecipeUUIDs failed: %v", err)
 	}
 	if len(files) != 1 {
 		t.Errorf("Expected 1 file, got %d", len(files))
@@ -136,30 +145,30 @@ func TestUpsertTag(t *testing.T) {
 	}
 }
 
-func TestFileRecipeMapping(t *testing.T) {
+func TestMultipleFilesPerRecipe(t *testing.T) {
 	skipIfNoDatabase(t)
 
 	userUUID := uuid.Must(uuid.NewV4())
-	recipe, err := InsertRecipe("mapping-test", userUUID, "test")
+	recipe, err := InsertRecipe("multi-file-test", userUUID, "test")
 	if err != nil {
 		t.Fatalf("InsertRecipe failed: %v", err)
 	}
 
-	file, err := InsertFile("https://example.com/mapping.jpg", true)
-	if err != nil {
-		t.Fatalf("InsertFile failed: %v", err)
+	for i := 0; i < 3; i++ {
+		_, err := InsertFile(recipe.UUID, "https://example.com/page.jpg", i, true)
+		if err != nil {
+			t.Fatalf("InsertFile failed: %v", err)
+		}
 	}
 
-	err = InsertFileRecipe(file.UUID, recipe.UUID, 0)
+	files, err := GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
 	if err != nil {
-		t.Fatalf("InsertFileRecipe failed: %v", err)
+		t.Fatalf("GetFilesByRecipeUUIDs failed: %v", err)
 	}
-
-	mappings, err := GetFileMappingsByRecipeUUIDs([]uuid.UUID{recipe.UUID})
-	if err != nil {
-		t.Fatalf("GetFileMappingsByRecipeUUIDs failed: %v", err)
+	if len(files) != 3 {
+		t.Errorf("Expected 3 files, got %d", len(files))
 	}
-	if len(mappings) != 1 {
-		t.Errorf("Expected 1 mapping, got %d", len(mappings))
+	if files[0].PageNumber != 0 || files[1].PageNumber != 1 || files[2].PageNumber != 2 {
+		t.Error("Expected files to be ordered by page_number")
 	}
 }

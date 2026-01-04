@@ -8,22 +8,18 @@ import (
 
 type Recipe struct {
 	UUID      uuid.UUID `json:"uuid"`
-	Filename  string    `json:"filename"`
+	Name      string    `json:"name"`
 	User      uuid.UUID `json:"user_uuid"`
 	TagString string    `json:"tag_string"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type File struct {
-	UUID  uuid.UUID `json:"uuid"`
-	URL   string    `json:"url"`
-	Image bool      `json:"image"`
-}
-
-type FileRecipe struct {
-	FileUUID   uuid.UUID `json:"file_uuid"`
+	UUID       uuid.UUID `json:"uuid"`
 	RecipeUUID uuid.UUID `json:"recipe_uuid"`
+	URL        string    `json:"url"`
 	PageNumber int       `json:"page_number"`
+	Image      bool      `json:"image"`
 }
 
 type Tag struct {
@@ -36,14 +32,11 @@ type RecipeTag struct {
 	TagUUID    uuid.UUID `json:"tag_uuid"`
 }
 
-// Response for GET /api/recipes
 type RecipesResponse struct {
-	RecipeData  []Recipe     `json:"recipeData"`
-	FileData    []File       `json:"fileData"`
-	MappingData []FileRecipe `json:"mappingData"`
+	RecipeData []Recipe `json:"recipeData"`
+	FileData   []File   `json:"fileData"`
 }
 
-// Response for POST /api/recipes
 type UploadResponse struct {
 	Success bool   `json:"success"`
 	Recipe  Recipe `json:"recipe"`

@@ -42,15 +42,11 @@ func TestGetRecipes_ReturnsJSON(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	// Response should have all three fields (even if empty)
 	if response.RecipeData == nil {
 		t.Error("Expected recipeData to be non-nil")
 	}
 	if response.FileData == nil {
 		t.Error("Expected fileData to be non-nil")
-	}
-	if response.MappingData == nil {
-		t.Error("Expected mappingData to be non-nil")
 	}
 }
 
@@ -71,10 +67,9 @@ func TestGetRecipes_MissingUserUUID(t *testing.T) {
 	}
 }
 
-func TestCreateRecipe_MissingFilename(t *testing.T) {
+func TestCreateRecipe_MissingName(t *testing.T) {
 	t.Skip("Enable when CreateRecipe is implemented")
 
-	// Create empty multipart form
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	writer.Close()
@@ -88,20 +83,17 @@ func TestCreateRecipe_MissingFilename(t *testing.T) {
 	resp := w.Result()
 	defer resp.Body.Close()
 
-	// Should return error for missing filename
 	if resp.StatusCode == http.StatusOK {
-		t.Error("Expected error status for missing filename")
+		t.Error("Expected error status for missing name")
 	}
 }
 
 func TestCreateRecipe_WithFiles(t *testing.T) {
 	t.Skip("Enable when CreateRecipe is implemented and storage is mocked")
 
-	// Create multipart form with a test file
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// Add a fake file
 	part, err := writer.CreateFormFile("file", "test.jpg")
 	if err != nil {
 		t.Fatal(err)
@@ -110,7 +102,7 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/api/recipes?filename=TestRecipe&tagString=dinner,quick", body)
+	req := httptest.NewRequest("POST", "/api/recipes?name=TestRecipe&tagString=dinner,quick", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
@@ -132,8 +124,8 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 	if !response.Success {
 		t.Error("Expected success to be true")
 	}
-	if response.Recipe.Filename != "TestRecipe" {
-		t.Errorf("Expected filename 'TestRecipe', got %q", response.Recipe.Filename)
+	if response.Recipe.Name != "TestRecipe" {
+		t.Errorf("Expected name 'TestRecipe', got %q", response.Recipe.Name)
 	}
 	if response.Recipe.UUID == uuid.Nil {
 		t.Error("Expected non-nil UUID for recipe")
@@ -146,14 +138,13 @@ func TestCreateRecipe_MultipleFiles(t *testing.T) {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	// Add multiple files
 	for i := 0; i < 3; i++ {
 		part, _ := writer.CreateFormFile("file", "test.jpg")
 		part.Write([]byte("fake image data"))
 	}
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/api/recipes?filename=MultiPageRecipe&tagString=cookbook", body)
+	req := httptest.NewRequest("POST", "/api/recipes?name=MultiPageRecipe&tagString=cookbook", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
@@ -165,8 +156,6 @@ func TestCreateRecipe_MultipleFiles(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
 	}
-
-	// TODO: Verify that 3 files were created and linked
 }
 
 func TestRespondWithError(t *testing.T) {
