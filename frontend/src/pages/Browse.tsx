@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getRecipes, getFileURL } from '../api'
+import { getRecipes, getFileURL, deleteRecipe } from '../api'
 import type { Recipe, File } from '../types.gen'
 
 const USER_UUID = '11111111-1111-1111-1111-111111111111'
@@ -34,6 +34,7 @@ export function Browse({ onNavigate }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(initialParams.recipe)
   const [tagFilter, setTagFilter] = useState(initialParams.tag)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     getRecipes(USER_UUID)
@@ -74,6 +75,24 @@ export function Browse({ onNavigate }: Props) {
     setTagFilter(event.target.value)
   }
 
+  const handleDelete = () => {
+    if (selectedRecipeId === '') return
+    if (!window.confirm('Are you sure you want to delete this recipe?')) return
+
+    setDeleting(true)
+    deleteRecipe(selectedRecipeId)
+      .then(() => {
+        setRecipes((prev) => prev.filter((r) => r.uuid !== selectedRecipeId))
+        setSelectedRecipeId('')
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'Failed to delete recipe')
+      })
+      .finally(() => {
+        setDeleting(false)
+      })
+  }
+
   return (
     <div className="container">
       <button className="btn" onClick={() => { onNavigate('home') }}>
@@ -112,7 +131,16 @@ export function Browse({ onNavigate }: Props) {
 
       {selectedRecipe !== null && (
         <div style={{ marginTop: '2rem' }}>
-          <h2>{selectedRecipe.name}</h2>
+          <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
+            <h2 style={{ margin: 0 }}>{selectedRecipe.name}</h2>
+            <button
+              className="btn btn-danger"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
           <p>Tags: {selectedRecipe.tag_string}</p>
           {selectedRecipe.files.map((file) => (
             <img

@@ -41,3 +41,13 @@ export async function createRecipe(
   }
   return response.json() as Promise<UploadResponse>
 }
+
+export async function deleteRecipe(recipeUUID: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/recipes?uuid=${encodeURIComponent(recipeUUID)}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete recipe: ${response.status.toString()}`)
+  }
+}

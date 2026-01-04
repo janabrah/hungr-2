@@ -47,6 +47,16 @@ body {
   opacity: 0.8;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
 .input {
   display: block;
   width: 100%;
