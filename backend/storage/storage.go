@@ -132,6 +132,24 @@ func InsertRecipeTag(recipeUUID, tagUUID uuid.UUID) error {
 	return err
 }
 
+func DeleteRecipe(recipeUUID uuid.UUID) error {
+	_, err := db.Exec(context.Background(),
+		`DELETE FROM recipe_tags WHERE recipe_uuid = $1`, recipeUUID)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(context.Background(),
+		`DELETE FROM files WHERE recipe_uuid = $1`, recipeUUID)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(context.Background(),
+		`DELETE FROM recipes WHERE uuid = $1`, recipeUUID)
+	return err
+}
+
 func CreateTagUUID(tag string) uuid.UUID {
 	namespace := uuid.Must(uuid.FromString(tagNamespace))
 	return uuid.NewV5(namespace, tag)

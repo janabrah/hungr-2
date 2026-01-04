@@ -181,3 +181,41 @@ func TestMultipleFilesPerRecipe(t *testing.T) {
 		t.Error("Expected files to be ordered by page_number")
 	}
 }
+
+func TestDeleteRecipe(t *testing.T) {
+	skipIfNoDatabase(t)
+
+	userUUID := uuid.Must(uuid.NewV4())
+	recipe, err := InsertRecipe("delete-test", userUUID, "test")
+	if err != nil {
+		t.Fatalf("InsertRecipe failed: %v", err)
+	}
+
+	_, err = InsertFile(recipe.UUID, []byte("file data"), "image/jpeg", 0, true)
+	if err != nil {
+		t.Fatalf("InsertFile failed: %v", err)
+	}
+
+	err = DeleteRecipe(recipe.UUID)
+	if err != nil {
+		t.Fatalf("DeleteRecipe failed: %v", err)
+	}
+
+	recipes, err := GetRecipesByUserUUID(userUUID)
+	if err != nil {
+		t.Fatalf("GetRecipesByUserUUID failed: %v", err)
+	}
+	for _, r := range recipes {
+		if r.UUID == recipe.UUID {
+			t.Error("Recipe should have been deleted")
+		}
+	}
+
+	files, err := GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
+	if err != nil {
+		t.Fatalf("GetFilesByRecipeUUIDs failed: %v", err)
+	}
+	if len(files) != 0 {
+		t.Errorf("Expected 0 files after recipe deletion, got %d", len(files))
+	}
+}

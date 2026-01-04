@@ -147,6 +147,29 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func DeleteRecipe(w http.ResponseWriter, r *http.Request) {
+	recipeUUIDStr := r.URL.Query().Get("uuid")
+	if recipeUUIDStr == "" {
+		respondWithError(w, http.StatusBadRequest, "uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(recipeUUIDStr)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid uuid")
+		return
+	}
+
+	err = storage.DeleteRecipe(recipeUUID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to delete recipe: "+err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
 func GetFile(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	parts := strings.Split(path, "/")

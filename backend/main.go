@@ -39,7 +39,7 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func handleRecipes(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
 	switch r.Method {
@@ -47,6 +47,8 @@ func handleRecipes(w http.ResponseWriter, r *http.Request) {
 		handlers.GetRecipes(w, r)
 	case "POST":
 		handlers.CreateRecipe(w, r)
+	case "DELETE":
+		handlers.DeleteRecipe(w, r)
 	case "OPTIONS":
 		w.WriteHeader(http.StatusOK)
 	default:
