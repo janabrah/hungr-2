@@ -1,13 +1,12 @@
 import { useState, useRef } from 'react'
 import { createRecipe } from '../api'
 
-const USER_UUID = '11111111-1111-1111-1111-111111111111'
-
 type Props = {
   onNavigate: (page: 'home') => void
+  userUUID: string
 }
 
-export function Upload({ onNavigate }: Props) {
+export function Upload({ onNavigate, userUUID }: Props) {
   const [files, setFiles] = useState<FileList | null>(null)
   const [name, setName] = useState('')
   const [tags, setTags] = useState('')
@@ -25,7 +24,7 @@ export function Upload({ onNavigate }: Props) {
     setSubmitting(true)
     setError(null)
 
-    createRecipe(USER_UUID, name, tags, files)
+    createRecipe(userUUID, name, tags, files)
       .then(() => {
         setSuccess(true)
         setName('')

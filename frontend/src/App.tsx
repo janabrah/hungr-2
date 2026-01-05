@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Home } from './pages/Home'
 import { Upload } from './pages/Upload'
 import { Browse } from './pages/Browse'
+import { Login } from './pages/Login'
+import { getEmail, emailToUserUUID } from './auth'
 
 type Page = 'home' | 'upload' | 'browse'
 
@@ -14,6 +16,7 @@ function getPageFromPath(): Page {
 
 function App() {
   const [page, setPage] = useState<Page>(getPageFromPath)
+  const [email, setEmailState] = useState<string | null>(getEmail)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -29,13 +32,23 @@ function App() {
     setPage(newPage)
   }
 
+  const handleLogin = () => {
+    setEmailState(getEmail())
+  }
+
+  if (email === null) {
+    return <Login onLogin={handleLogin} />
+  }
+
+  const userUUID = emailToUserUUID(email)
+
   switch (page) {
     case 'home':
-      return <Home onNavigate={navigate} />
+      return <Home onNavigate={navigate} email={email} />
     case 'upload':
-      return <Upload onNavigate={navigate} />
+      return <Upload onNavigate={navigate} userUUID={userUUID} />
     case 'browse':
-      return <Browse onNavigate={navigate} />
+      return <Browse onNavigate={navigate} userUUID={userUUID} />
   }
 }
 
