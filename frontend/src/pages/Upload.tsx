@@ -26,7 +26,7 @@ export function Upload({ userUUID, email, onNavigateHome }: Props) {
     setSubmitting(true)
     setError(null)
 
-    createRecipe(userUUID, name, tags, files)
+    createRecipe(email, name, tags, files)
       .then(() => {
         setSuccess(true)
         setName('')

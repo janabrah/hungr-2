@@ -12,19 +12,13 @@ import (
 )
 
 func GetRecipes(w http.ResponseWriter, r *http.Request) {
-	userUUIDStr := r.URL.Query().Get("user_uuid")
-	if userUUIDStr == "" {
-		respondWithError(w, http.StatusBadRequest, "user_uuid is required")
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		respondWithError(w, http.StatusBadRequest, "email is required")
 		return
 	}
 
-	userUUID, err := uuid.FromString(userUUIDStr)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid user_uuid")
-		return
-	}
-
-	recipes, err := storage.GetRecipesByUserUUID(userUUID)
+	recipes, err := storage.GetRecipesByUserEmail(email)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -59,14 +53,9 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 
 	tagString := r.URL.Query().Get("tagString")
 
-	userUUIDStr := r.URL.Query().Get("user_uuid")
-	if userUUIDStr == "" {
-		respondWithError(w, http.StatusBadRequest, "user_uuid is required")
-		return
-	}
-	userUUID, err := uuid.FromString(userUUIDStr)
-	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid user_uuid")
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		respondWithError(w, http.StatusBadRequest, "email is required")
 		return
 	}
 
@@ -81,7 +70,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recipe, err := storage.InsertRecipe(name, userUUID, tagString)
+	recipe, err := storage.InsertRecipeByEmail(name, email, tagString)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to create recipe: "+err.Error())
 		return
