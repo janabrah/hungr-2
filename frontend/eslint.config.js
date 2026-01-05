@@ -3,12 +3,14 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import eslintConfigPrettier from 'eslint-config-prettier'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+  // Main app config
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
       tseslint.configs.strictTypeChecked,
@@ -36,6 +38,30 @@ export default defineConfig([
       '@typescript-eslint/no-misused-promises': 'error',
       'eqeqeq': ['error', 'always'],
       'no-console': 'warn',
+    },
+  },
+  // E2E test config
+  {
+    files: ['e2e/**/*.ts'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.strictTypeChecked,
+      eslintConfigPrettier,
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        project: './tsconfig.e2e.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/no-misused-promises': 'error',
+      'eqeqeq': ['error', 'always'],
     },
   },
 ])
