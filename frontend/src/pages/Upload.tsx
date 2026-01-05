@@ -3,12 +3,15 @@ import { createRecipe } from '../api'
 import { Header } from '../components/Header'
 import type { Email } from '../branded'
 
+type Page = 'home' | 'upload' | 'browse'
+
 type Props = {
   email: Email
-  onNavigateHome: () => void
+  currentPage: Page
+  onNavigate: (page: Page) => void
 }
 
-export function Upload({ email, onNavigateHome }: Props) {
+export function Upload({ email, currentPage, onNavigate }: Props) {
   const [files, setFiles] = useState<FileList | null>(null)
   const [name, setName] = useState('')
   const [tags, setTags] = useState('')
@@ -46,7 +49,7 @@ export function Upload({ email, onNavigateHome }: Props) {
 
   return (
     <>
-      <Header email={email} onNavigateHome={onNavigateHome} />
+      <Header email={email} currentPage={currentPage} onNavigate={onNavigate} />
       <div className="container">
         <h1>Upload a Recipe</h1>
 

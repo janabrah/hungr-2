@@ -4,9 +4,12 @@ import { Header } from '../components/Header'
 import type { Recipe, File } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 
+type Page = 'home' | 'upload' | 'browse'
+
 type Props = {
   email: Email
-  onNavigateHome: () => void
+  currentPage: Page
+  onNavigate: (page: Page) => void
 }
 
 type RecipeWithFiles = Recipe & { files: File[] }
@@ -28,7 +31,7 @@ function setParams(tag: string, recipe: string) {
   window.history.replaceState(null, '', url)
 }
 
-export function Browse({ email, onNavigateHome }: Props) {
+export function Browse({ email, currentPage, onNavigate }: Props) {
   const initialParams = getParams()
   const [recipes, setRecipes] = useState<RecipeWithFiles[]>([])
   const [loading, setLoading] = useState(true)
@@ -96,7 +99,7 @@ export function Browse({ email, onNavigateHome }: Props) {
 
   return (
     <>
-      <Header email={email} onNavigateHome={onNavigateHome} />
+      <Header email={email} currentPage={currentPage} onNavigate={onNavigate} />
       <div className="container">
         <h1>Browse Recipes</h1>
 

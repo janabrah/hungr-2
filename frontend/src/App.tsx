@@ -41,15 +41,13 @@ function App() {
     return <Login onLogin={handleLogin} />
   }
 
-  const navigateHome = () => { navigate('home') }
-
   switch (page) {
     case 'home':
-      return <Home onNavigate={navigate} email={email} onNavigateHome={navigateHome} />
+      return <Home onNavigate={navigate} email={email} currentPage={page} />
     case 'upload':
-      return <Upload email={email} onNavigateHome={navigateHome} />
+      return <Upload email={email} currentPage={page} onNavigate={navigate} />
     case 'browse':
-      return <Browse email={email} onNavigateHome={navigateHome} />
+      return <Browse email={email} currentPage={page} onNavigate={navigate} />
   }
 }
 
