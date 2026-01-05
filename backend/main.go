@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/cobyabrahams/hungr/handlers"
 	"github.com/cobyabrahams/hungr/logger"
@@ -25,6 +26,7 @@ func main() {
 
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/api/recipes", middleware.RequestLogger(middleware.CORS(handleRecipes, "GET, POST, DELETE, OPTIONS")))
+	http.HandleFunc("/api/recipes/", middleware.RequestLogger(middleware.CORS(handleRecipeSubresources, "GET, PUT, OPTIONS")))
 	http.HandleFunc("/api/files/", middleware.RequestLogger(middleware.CORS(handleFiles, "GET")))
 	http.HandleFunc("/api/users", middleware.RequestLogger(middleware.CORS(handleUsers, "GET, POST, PUT, DELETE, OPTIONS")))
 	http.HandleFunc("/api/auth/login", middleware.RequestLogger(middleware.CORS(handleLogin, "POST, OPTIONS")))
@@ -52,6 +54,21 @@ func handleRecipes(w http.ResponseWriter, r *http.Request) {
 		handlers.DeleteRecipe(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleRecipeSubresources(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/steps") {
+		switch r.Method {
+		case "GET":
+			handlers.GetRecipeSteps(w, r)
+		case "PUT":
+			handlers.UpdateRecipeSteps(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	} else {
+		http.Error(w, "Not found", http.StatusNotFound)
 	}
 }
 

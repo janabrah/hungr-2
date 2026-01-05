@@ -8,6 +8,10 @@ import (
 )
 
 const (
+	queryGetRecipeByUUID = `
+		SELECT uuid, name, user_uuid, tag_string, created_at
+		FROM recipes WHERE uuid = $1`
+
 	queryGetRecipesByUserEmail = `
 		SELECT r.uuid, r.name, r.user_uuid, r.tag_string, r.created_at
 		FROM recipes r
@@ -25,6 +29,16 @@ const (
 	queryDeleteRecipeFiles = `DELETE FROM files WHERE recipe_uuid = $1`
 	queryDeleteRecipe = `DELETE FROM recipes WHERE uuid = $1`
 )
+
+func GetRecipeByUUID(recipeUUID uuid.UUID) (*models.Recipe, error) {
+	var r models.Recipe
+	err := db.QueryRow(context.Background(), queryGetRecipeByUUID, recipeUUID).Scan(
+		&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
 
 func GetRecipesByUserEmail(email string) ([]models.Recipe, error) {
 	rows, err := db.Query(context.Background(), queryGetRecipesByUserEmail, email)

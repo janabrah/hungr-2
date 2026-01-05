@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -9,6 +12,7 @@ import (
 	"github.com/cobyabrahams/hungr/logger"
 	"github.com/cobyabrahams/hungr/models"
 	"github.com/cobyabrahams/hungr/storage"
+	"github.com/cobyabrahams/hungr/units"
 	"github.com/gofrs/uuid"
 )
 
@@ -208,4 +212,134 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+func GetRecipeSteps(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse recipe UUID from path: /api/recipes/{uuid}/steps
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/api/recipes/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		respondWithError(w, http.StatusBadRequest, "recipe uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(parts[0])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid recipe uuid")
+		return
+	}
+
+	// Check if recipe exists
+	_, err = storage.GetRecipeByUUID(recipeUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "recipe not found")
+			return
+		}
+		logger.Error(ctx, "failed to get recipe", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe")
+		return
+	}
+
+	// Get steps with ingredients
+	stepsWithIngredients, err := storage.GetRecipeStepsWithIngredients(recipeUUID)
+	if err != nil {
+		logger.Error(ctx, "failed to get recipe steps", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe steps")
+		return
+	}
+
+	// Build response
+	response := models.RecipeStepsResponse{
+		Steps: make([]models.RecipeStepResponse, len(stepsWithIngredients)),
+	}
+
+	for i, step := range stepsWithIngredients {
+		ingredients := make([]string, len(step.Ingredients))
+		for j, ing := range step.Ingredients {
+			category := units.GetCategoryForIngredientUnit(ing.IngredientType)
+			formatted := units.FormatBest(ing.Quantity, category)
+			ingredients[j] = fmt.Sprintf("%s %s", formatted, ing.IngredientName)
+		}
+
+		response.Steps[i] = models.RecipeStepResponse{
+			Instruction: step.Instructions,
+			Ingredients: ingredients,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func UpdateRecipeSteps(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse recipe UUID from path: /api/recipes/{uuid}/steps
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/api/recipes/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		respondWithError(w, http.StatusBadRequest, "recipe uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(parts[0])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid recipe uuid")
+		return
+	}
+
+	// Check if recipe exists
+	_, err = storage.GetRecipeByUUID(recipeUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "recipe not found")
+			return
+		}
+		logger.Error(ctx, "failed to get recipe", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe")
+		return
+	}
+
+	// Parse request body
+	var request models.RecipeStepsResponse
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Convert to storage input format
+	steps := make([]storage.StepInput, len(request.Steps))
+	for i, step := range request.Steps {
+		ingredients := make([]storage.IngredientInput, len(step.Ingredients))
+		for j, ingStr := range step.Ingredients {
+			parsed, err := units.ParseIngredientString(ingStr)
+			if err != nil {
+				respondWithError(w, http.StatusBadRequest, fmt.Sprintf("invalid ingredient %q: %v", ingStr, err))
+				return
+			}
+			ingredients[j] = storage.IngredientInput{
+				Name:     parsed.IngredientName,
+				Unit:     parsed.Unit,
+				Quantity: parsed.Quantity,
+			}
+		}
+		steps[i] = storage.StepInput{
+			Instruction: step.Instruction,
+			Ingredients: ingredients,
+		}
+	}
+
+	// Replace all steps
+	if err := storage.ReplaceRecipeSteps(recipeUUID, steps); err != nil {
+		logger.Error(ctx, "failed to update recipe steps", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to update recipe steps")
+		return
+	}
+
+	logger.Info(ctx, "recipe steps updated", "recipe_uuid", recipeUUID, "step_count", len(steps))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
