@@ -1,11 +1,14 @@
+import { asEmail, type Email } from './branded'
+
 const COOKIE_NAME = 'hungr_email'
 
-export function getEmail(): string | null {
+export function getEmail(): Email | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${COOKIE_NAME}=([^;]*)`))
-  return match?.[1] ? decodeURIComponent(match[1]) : null
+  const value = match?.[1] ? decodeURIComponent(match[1]) : null
+  return value ? asEmail(value) : null
 }
 
-export function setEmail(email: string): void {
+export function setEmail(email: Email): void {
   const maxAge = 60 * 60 * 24 * 365 // 1 year
   document.cookie = `${COOKIE_NAME}=${encodeURIComponent(email)}; path=/; max-age=${maxAge.toString()}; SameSite=Lax`
 }

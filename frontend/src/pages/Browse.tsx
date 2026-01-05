@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { getRecipes, getFileURL, deleteRecipe } from '../api'
 import { Header } from '../components/Header'
 import type { Recipe, File } from '../types.gen'
+import { asUUID, type Email } from '../branded'
 
 type Props = {
-  userUUID: string
-  email: string
+  email: Email
   onNavigateHome: () => void
 }
 
@@ -81,7 +81,7 @@ export function Browse({ email, onNavigateHome }: Props) {
     if (!window.confirm('Are you sure you want to delete this recipe?')) return
 
     setDeleting(true)
-    deleteRecipe(selectedRecipeId)
+    deleteRecipe(asUUID(selectedRecipeId))
       .then(() => {
         setRecipes((prev) => prev.filter((r) => r.uuid !== selectedRecipeId))
         setSelectedRecipeId('')

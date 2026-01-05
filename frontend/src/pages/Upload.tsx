@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react'
 import { createRecipe } from '../api'
 import { Header } from '../components/Header'
+import type { Email } from '../branded'
 
 type Props = {
-  userUUID: string
-  email: string
+  email: Email
   onNavigateHome: () => void
 }
 

@@ -141,3 +141,32 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
+
+func Login(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Email == "" {
+		respondWithError(w, http.StatusBadRequest, "email is required")
+		return
+	}
+
+	user, err := storage.UpsertUserOnLogin(req.Email)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to login: "+err.Error())
+		return
+	}
+
+	response := models.UserResponse{
+		Success: true,
+		User:    *user,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

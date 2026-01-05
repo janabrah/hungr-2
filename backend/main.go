@@ -24,6 +24,7 @@ func main() {
 	http.HandleFunc("/api/recipes", handleRecipes)
 	http.HandleFunc("/api/files/", handleFiles)
 	http.HandleFunc("/api/users", handleUsers)
+	http.HandleFunc("/api/auth/login", handleLogin)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -81,6 +82,21 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 		handlers.UpdateUser(w, r)
 	case "DELETE":
 		handlers.DeleteUser(w, r)
+	case "OPTIONS":
+		w.WriteHeader(http.StatusOK)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	switch r.Method {
+	case "POST":
+		handlers.Login(w, r)
 	case "OPTIONS":
 		w.WriteHeader(http.StatusOK)
 	default:

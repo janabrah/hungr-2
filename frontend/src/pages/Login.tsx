@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { setEmail } from '../auth'
+import { login } from '../api'
+import { asEmail } from '../branded'
 
 type Props = {
   onLogin: () => void
@@ -8,6 +10,7 @@ type Props = {
 export function Login({ onLogin }: Props) {
   const [email, setEmailValue] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -16,8 +19,21 @@ export function Login({ onLogin }: Props) {
       setError('Please enter a valid email address')
       return
     }
-    setEmail(trimmed)
-    onLogin()
+
+    setLoading(true)
+    setError(null)
+
+    login(trimmed)
+      .then(() => {
+        setEmail(asEmail(trimmed))
+        onLogin()
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'Login failed')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
   }
 
   return (
@@ -37,8 +53,8 @@ export function Login({ onLogin }: Props) {
             autoFocus
           />
           {error !== null && <p className="error">{error}</p>}
-          <button type="submit" className="btn" style={{ width: '100%' }}>
-            Continue
+          <button type="submit" className="btn" style={{ width: '100%' }} disabled={loading}>
+            {loading ? 'Logging in...' : 'Continue'}
           </button>
         </form>
       </div>

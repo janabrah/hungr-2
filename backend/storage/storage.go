@@ -187,10 +187,25 @@ func GetUserByEmail(email string) (*models.User, error) {
 func CreateUser(email, name string) (*models.User, error) {
 	var u models.User
 	err := db.QueryRow(context.Background(),
-		`INSERT INTO users (email, name)
-		 VALUES ($1, $2)
+		`INSERT INTO users (email, name, last_seen)
+		 VALUES ($1, $2, NOW())
 		 RETURNING uuid, email, name, created_at`,
 		email, name).Scan(
+		&u.UUID, &u.Email, &u.Name, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func UpsertUserOnLogin(email string) (*models.User, error) {
+	var u models.User
+	err := db.QueryRow(context.Background(),
+		`INSERT INTO users (email, name, last_seen)
+		 VALUES ($1, $1, NOW())
+		 ON CONFLICT (email) DO UPDATE SET last_seen = NOW()
+		 RETURNING uuid, email, name, created_at`,
+		email).Scan(
 		&u.UUID, &u.Email, &u.Name, &u.CreatedAt)
 	if err != nil {
 		return nil, err

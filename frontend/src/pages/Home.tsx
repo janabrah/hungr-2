@@ -1,9 +1,10 @@
 import { clearEmail } from '../auth'
 import { Header } from '../components/Header'
+import type { Email } from '../branded'
 
 type Props = {
   onNavigate: (page: 'upload' | 'browse') => void
-  email: string
+  email: Email
   onNavigateHome: () => void
 }
 

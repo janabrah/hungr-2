@@ -3,7 +3,8 @@ import { Home } from './pages/Home'
 import { Upload } from './pages/Upload'
 import { Browse } from './pages/Browse'
 import { Login } from './pages/Login'
-import { getEmail, emailToUserUUID } from './auth'
+import { getEmail } from './auth'
+import type { Email } from './branded'
 
 type Page = 'home' | 'upload' | 'browse'
 
@@ -16,7 +17,7 @@ function getPageFromPath(): Page {
 
 function App() {
   const [page, setPage] = useState<Page>(getPageFromPath)
-  const [email, setEmailState] = useState<string | null>(getEmail)
+  const [email, setEmailState] = useState<Email | null>(getEmail)
 
   useEffect(() => {
     const handlePopState = () => {
@@ -40,17 +41,15 @@ function App() {
     return <Login onLogin={handleLogin} />
   }
 
-  const userUUID = emailToUserUUID(email)
-
   const navigateHome = () => { navigate('home') }
 
   switch (page) {
     case 'home':
       return <Home onNavigate={navigate} email={email} onNavigateHome={navigateHome} />
     case 'upload':
-      return <Upload userUUID={userUUID} email={email} onNavigateHome={navigateHome} />
+      return <Upload email={email} onNavigateHome={navigateHome} />
     case 'browse':
-      return <Browse userUUID={userUUID} email={email} onNavigateHome={navigateHome} />
+      return <Browse email={email} onNavigateHome={navigateHome} />
   }
 }
 

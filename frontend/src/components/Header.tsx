@@ -1,5 +1,7 @@
+import type { Email } from '../branded'
+
 type Props = {
-  email: string
+  email: Email
   onNavigateHome: () => void
 }
 
