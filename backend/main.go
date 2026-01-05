@@ -30,6 +30,7 @@ func main() {
 	http.HandleFunc("/api/files/", middleware.RequestLogger(middleware.CORS(handleFiles, "GET")))
 	http.HandleFunc("/api/users", middleware.RequestLogger(middleware.CORS(handleUsers, "GET, POST, PUT, DELETE, OPTIONS")))
 	http.HandleFunc("/api/auth/login", middleware.RequestLogger(middleware.CORS(handleLogin, "POST, OPTIONS")))
+	http.HandleFunc("/api/extract-recipe", middleware.RequestLogger(middleware.CORS(handleExtractRecipe, "POST, OPTIONS")))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -98,6 +99,14 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 func handleLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		handlers.Login(w, r)
+	} else {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleExtractRecipe(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		handlers.ExtractRecipe(w, r)
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

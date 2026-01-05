@@ -1,6 +1,6 @@
 import type { Email } from '../branded'
 
-type Page = 'home' | 'upload' | 'browse'
+type Page = 'home' | 'upload' | 'browse' | 'import'
 
 type Props = {
   email: Email
@@ -27,6 +27,12 @@ export function Header({ email, currentPage, onNavigate }: Props) {
             onClick={() => onNavigate('browse')}
           >
             Browse
+          </button>
+          <button
+            className={`header-nav-btn ${currentPage === 'import' ? 'active' : ''}`}
+            onClick={() => onNavigate('import')}
+          >
+            Import
           </button>
         </nav>
       </div>

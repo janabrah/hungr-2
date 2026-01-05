@@ -87,9 +87,8 @@ func TestParseIngredientString_Errors(t *testing.T) {
 		desc  string
 	}{
 		{"", "empty string"},
-		{"flour", "single word"},
-		{"abc cups flour", "invalid quantity"},
 		{"1/0 cup flour", "division by zero"},
+		{"123", "number only"},
 	}
 
 	for _, tt := range tests {
@@ -97,6 +96,39 @@ func TestParseIngredientString_Errors(t *testing.T) {
 			_, err := ParseIngredientString(tt.input)
 			if err == nil {
 				t.Errorf("ParseIngredientString(%q) expected error, got nil", tt.input)
+			}
+		})
+	}
+}
+
+func TestParseIngredientString_NoQuantity(t *testing.T) {
+	tests := []struct {
+		input          string
+		expectedName   string
+		expectedQty    float64
+		expectedUnit   string
+	}{
+		{"flour", "flour", 1, "count"},
+		{"salt to taste", "salt to taste", 1, "count"},
+		{"avocado oil, for cooking", "avocado oil, for cooking", 1, "count"},
+		{"fresh parsley", "fresh parsley", 1, "count"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result, err := ParseIngredientString(tt.input)
+			if err != nil {
+				t.Errorf("ParseIngredientString(%q) unexpected error: %v", tt.input, err)
+				return
+			}
+			if result.IngredientName != tt.expectedName {
+				t.Errorf("expected name %q, got %q", tt.expectedName, result.IngredientName)
+			}
+			if result.Quantity != tt.expectedQty {
+				t.Errorf("expected quantity %f, got %f", tt.expectedQty, result.Quantity)
+			}
+			if result.Unit != tt.expectedUnit {
+				t.Errorf("expected unit %q, got %q", tt.expectedUnit, result.Unit)
 			}
 		})
 	}

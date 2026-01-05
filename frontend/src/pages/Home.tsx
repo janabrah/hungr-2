@@ -2,7 +2,7 @@ import { clearEmail } from '../auth'
 import { Header } from '../components/Header'
 import type { Email } from '../branded'
 
-type Page = 'home' | 'upload' | 'browse'
+type Page = 'home' | 'upload' | 'browse' | 'import'
 
 type Props = {
   onNavigate: (page: Page) => void

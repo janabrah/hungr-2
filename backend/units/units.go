@@ -452,6 +452,7 @@ type ParsedIngredient struct {
 }
 
 // ParseIngredientString parses strings like "2 cups flour" or "1/2 tsp salt"
+// Also handles ingredients without quantities like "salt to taste" or "avocado oil"
 // Returns quantity, unit key, category, and ingredient name
 func ParseIngredientString(s string) (ParsedIngredient, error) {
 	s = strings.TrimSpace(s)
@@ -460,15 +461,40 @@ func ParseIngredientString(s string) (ParsedIngredient, error) {
 	}
 
 	parts := strings.Fields(s)
-	if len(parts) < 2 {
-		// Could be just a count like "3 eggs"
+	if len(parts) < 1 {
 		return ParsedIngredient{}, fmt.Errorf("ingredient string too short: %q", s)
 	}
 
-	// Parse quantity (first part) - handle fractions like "1/2"
-	quantity, err := parseQuantity(parts[0])
+	// Try to parse quantity (first part) - handle fractions like "1/2"
+	// If the first word doesn't look like a number (no digits), treat whole string as ingredient
+	firstWord := parts[0]
+	hasDigit := false
+	for _, c := range firstWord {
+		if c >= '0' && c <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+
+	if !hasDigit {
+		// First word isn't a number - treat entire string as ingredient name
+		// with quantity 1 and category count
+		return ParsedIngredient{
+			Quantity:       1,
+			Unit:           "count",
+			Category:       CategoryCount,
+			IngredientName: s,
+		}, nil
+	}
+
+	quantity, err := parseQuantity(firstWord)
 	if err != nil {
-		return ParsedIngredient{}, fmt.Errorf("invalid quantity %q: %w", parts[0], err)
+		return ParsedIngredient{}, fmt.Errorf("invalid quantity %q: %w", firstWord, err)
+	}
+
+	// If only one part and it's a number, that's not valid
+	if len(parts) < 2 {
+		return ParsedIngredient{}, fmt.Errorf("ingredient string too short: %q", s)
 	}
 
 	// Try to find unit starting from second part

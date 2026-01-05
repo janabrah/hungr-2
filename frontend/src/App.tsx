@@ -2,16 +2,18 @@ import { useState, useEffect } from 'react'
 import { Home } from './pages/Home'
 import { Upload } from './pages/Upload'
 import { Browse } from './pages/Browse'
+import { Import } from './pages/Import'
 import { Login } from './pages/Login'
 import { getEmail } from './auth'
 import type { Email } from './branded'
 
-type Page = 'home' | 'upload' | 'browse'
+type Page = 'home' | 'upload' | 'browse' | 'import'
 
 function getPageFromPath(): Page {
   const path = window.location.pathname
   if (path === '/upload') return 'upload'
   if (path === '/browse') return 'browse'
+  if (path === '/import') return 'import'
   return 'home'
 }
 
@@ -48,6 +50,8 @@ function App() {
       return <Upload email={email} currentPage={page} onNavigate={navigate} />
     case 'browse':
       return <Browse email={email} currentPage={page} onNavigate={navigate} />
+    case 'import':
+      return <Import email={email} currentPage={page} onNavigate={navigate} />
   }
 }
 

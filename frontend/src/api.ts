@@ -83,3 +83,16 @@ export async function updateRecipeSteps(recipeUUID: UUID, steps: RecipeStepsResp
     throw new Error(data.error ?? `Failed to update recipe steps: ${response.status.toString()}`)
   }
 }
+
+export async function extractRecipeFromURL(url: string): Promise<RecipeStepsResponse> {
+  const response = await fetch(`${API_BASE}/api/extract-recipe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(data.error ?? `Failed to extract recipe: ${response.status.toString()}`)
+  }
+  return response.json() as Promise<RecipeStepsResponse>
+}

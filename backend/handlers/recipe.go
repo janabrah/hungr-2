@@ -75,10 +75,6 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	files := r.MultipartForm.File["file"]
-	if len(files) == 0 {
-		respondWithError(w, http.StatusBadRequest, "at least one file is required")
-		return
-	}
 
 	recipe, err := storage.InsertRecipeByEmail(name, email, tagString)
 	if err != nil {

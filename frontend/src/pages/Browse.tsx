@@ -6,7 +6,7 @@ import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
 import type { Recipe, File, RecipeStep } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 
-type Page = 'home' | 'upload' | 'browse'
+type Page = 'home' | 'upload' | 'browse' | 'import'
 
 type Props = {
   email: Email

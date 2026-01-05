@@ -3,7 +3,7 @@ import { createRecipe } from '../api'
 import { Header } from '../components/Header'
 import type { Email } from '../branded'
 
-type Page = 'home' | 'upload' | 'browse'
+type Page = 'home' | 'upload' | 'browse' | 'import'
 
 type Props = {
   email: Email
