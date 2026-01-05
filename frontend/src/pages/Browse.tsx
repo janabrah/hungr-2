@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { getRecipes, getFileURL, deleteRecipe } from '../api'
+import { Header } from '../components/Header'
 import type { Recipe, File } from '../types.gen'
 
 type Props = {
-  onNavigate: (page: 'home') => void
   userUUID: string
+  email: string
+  onNavigateHome: () => void
 }
 
 type RecipeWithFiles = Recipe & { files: File[] }
@@ -26,7 +28,7 @@ function setParams(tag: string, recipe: string) {
   window.history.replaceState(null, '', url)
 }
 
-export function Browse({ onNavigate, userUUID }: Props) {
+export function Browse({ userUUID, email, onNavigateHome }: Props) {
   const initialParams = getParams()
   const [recipes, setRecipes] = useState<RecipeWithFiles[]>([])
   const [loading, setLoading] = useState(true)
@@ -93,64 +95,63 @@ export function Browse({ onNavigate, userUUID }: Props) {
   }
 
   return (
-    <div className="container">
-      <button className="btn" onClick={() => { onNavigate('home') }}>
-        ← Back
-      </button>
+    <>
+      <Header email={email} onNavigateHome={onNavigateHome} />
+      <div className="container">
+        <h1>Browse Recipes</h1>
 
-      <h1>Browse Recipes</h1>
+        {error !== null && <p className="error">{error}</p>}
 
-      {error !== null && <p className="error">{error}</p>}
-
-      <div className="flex-row" style={{ marginBottom: '1rem' }}>
-        <input
-          type="text"
-          placeholder="Filter by tag"
-          className="input"
-          style={{ marginBottom: 0 }}
-          value={tagFilter}
-          onChange={handleTagChange}
-        />
-      </div>
-
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <select className="select" onChange={handleSelectRecipe} value={selectedRecipeId}>
-          <option value="" disabled>
-            Select a recipe
-          </option>
-          {filteredRecipes.map((recipe) => (
-            <option key={recipe.uuid} value={recipe.uuid}>
-              {recipe.name} - {recipe.tag_string}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {selectedRecipe !== null && (
-        <div style={{ marginTop: '2rem' }}>
-          <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
-            <h2 style={{ margin: 0 }}>{selectedRecipe.name}</h2>
-            <button
-              className="btn btn-danger"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? 'Deleting...' : 'Delete'}
-            </button>
-          </div>
-          <p>Tags: {selectedRecipe.tag_string}</p>
-          {selectedRecipe.files.map((file) => (
-            <img
-              key={file.uuid}
-              src={getFileURL(file.url)}
-              alt={`${selectedRecipe.name} page ${String(file.page_number + 1)}`}
-              className="recipe-image"
-            />
-          ))}
+        <div className="flex-row" style={{ marginBottom: '1rem' }}>
+          <input
+            type="text"
+            placeholder="Filter by tag"
+            className="input"
+            style={{ marginBottom: 0 }}
+            value={tagFilter}
+            onChange={handleTagChange}
+          />
         </div>
-      )}
-    </div>
+
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <select className="select" onChange={handleSelectRecipe} value={selectedRecipeId}>
+            <option value="" disabled>
+              Select a recipe
+            </option>
+            {filteredRecipes.map((recipe) => (
+              <option key={recipe.uuid} value={recipe.uuid}>
+                {recipe.name} - {recipe.tag_string}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {selectedRecipe !== null && (
+          <div style={{ marginTop: '2rem' }}>
+            <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
+              <h2 style={{ margin: 0 }}>{selectedRecipe.name}</h2>
+              <button
+                className="btn btn-danger"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+            <p>Tags: {selectedRecipe.tag_string}</p>
+            {selectedRecipe.files.map((file) => (
+              <img
+                key={file.uuid}
+                src={getFileURL(file.url)}
+                alt={`${selectedRecipe.name} page ${String(file.page_number + 1)}`}
+                className="recipe-image"
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
