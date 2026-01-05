@@ -8,7 +8,7 @@ type Props = {
   onNavigateHome: () => void
 }
 
-export function Upload({ userUUID, email, onNavigateHome }: Props) {
+export function Upload({ email, onNavigateHome }: Props) {
   const [files, setFiles] = useState<FileList | null>(null)
   const [name, setName] = useState('')
   const [tags, setTags] = useState('')
