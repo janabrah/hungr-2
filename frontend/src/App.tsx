@@ -42,13 +42,15 @@ function App() {
 
   const userUUID = emailToUserUUID(email)
 
+  const navigateHome = () => { navigate('home') }
+
   switch (page) {
     case 'home':
-      return <Home onNavigate={navigate} email={email} />
+      return <Home onNavigate={navigate} email={email} onNavigateHome={navigateHome} />
     case 'upload':
-      return <Upload onNavigate={navigate} userUUID={userUUID} />
+      return <Upload userUUID={userUUID} email={email} onNavigateHome={navigateHome} />
     case 'browse':
-      return <Browse onNavigate={navigate} userUUID={userUUID} />
+      return <Browse userUUID={userUUID} email={email} onNavigateHome={navigateHome} />
   }
 }
 

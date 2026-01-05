@@ -1,12 +1,14 @@
 import { useState, useRef } from 'react'
 import { createRecipe } from '../api'
+import { Header } from '../components/Header'
 
 type Props = {
-  onNavigate: (page: 'home') => void
   userUUID: string
+  email: string
+  onNavigateHome: () => void
 }
 
-export function Upload({ onNavigate, userUUID }: Props) {
+export function Upload({ userUUID, email, onNavigateHome }: Props) {
   const [files, setFiles] = useState<FileList | null>(null)
   const [name, setName] = useState('')
   const [tags, setTags] = useState('')
@@ -43,47 +45,46 @@ export function Upload({ onNavigate, userUUID }: Props) {
   }
 
   return (
-    <div className="container">
-      <button className="btn" onClick={() => { onNavigate('home') }}>
-        ← Back
-      </button>
+    <>
+      <Header email={email} onNavigateHome={onNavigateHome} />
+      <div className="container">
+        <h1>Upload a Recipe</h1>
 
-      <h1>Upload a Recipe</h1>
+        {success && <p>Recipe uploaded successfully!</p>}
+        {error !== null && <p className="error">{error}</p>}
 
-      {success && <p>Recipe uploaded successfully!</p>}
-      {error !== null && <p className="error">{error}</p>}
+        <form onSubmit={handleSubmit}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            required
+            className="input"
+            onChange={(e) => { setFiles(e.target.files) }}
+          />
 
-      <form onSubmit={handleSubmit}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          required
-          className="input"
-          onChange={(e) => { setFiles(e.target.files) }}
-        />
+          <input
+            type="text"
+            placeholder="Recipe name"
+            required
+            className="input"
+            value={name}
+            onChange={(e) => { setName(e.target.value) }}
+          />
 
-        <input
-          type="text"
-          placeholder="Recipe name"
-          required
-          className="input"
-          value={name}
-          onChange={(e) => { setName(e.target.value) }}
-        />
+          <input
+            type="text"
+            placeholder="Tags (comma separated)"
+            className="input"
+            value={tags}
+            onChange={(e) => { setTags(e.target.value) }}
+          />
 
-        <input
-          type="text"
-          placeholder="Tags (comma separated)"
-          className="input"
-          value={tags}
-          onChange={(e) => { setTags(e.target.value) }}
-        />
-
-        <button type="submit" className="btn" disabled={submitting}>
-          {submitting ? 'Uploading...' : 'Upload'}
-        </button>
-      </form>
-    </div>
+          <button type="submit" className="btn" disabled={submitting}>
+            {submitting ? 'Uploading...' : 'Upload'}
+          </button>
+        </form>
+      </div>
+    </>
   )
 }
