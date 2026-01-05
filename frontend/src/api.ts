@@ -6,8 +6,8 @@ export function getFileURL(path: string): string {
   return `${API_BASE}${path}`
 }
 
-export async function getRecipes(userUUID: string): Promise<RecipesResponse> {
-  const response = await fetch(`${API_BASE}/api/recipes?user_uuid=${encodeURIComponent(userUUID)}`)
+export async function getRecipes(email: string): Promise<RecipesResponse> {
+  const response = await fetch(`${API_BASE}/api/recipes?email=${encodeURIComponent(email)}`)
   if (!response.ok) {
     throw new Error(`Failed to fetch recipes: ${response.status.toString()}`)
   }
@@ -15,7 +15,7 @@ export async function getRecipes(userUUID: string): Promise<RecipesResponse> {
 }
 
 export async function createRecipe(
-  userUUID: string,
+  email: string,
   name: string,
   tagString: string,
   files: FileList
@@ -26,7 +26,7 @@ export async function createRecipe(
   }
 
   const params = new URLSearchParams({
-    user_uuid: userUUID,
+    email,
     name,
     tagString,
   })

@@ -19,8 +19,7 @@ var _ = uuid.Nil
 func TestGetRecipes_ReturnsJSON(t *testing.T) {
 	t.Skip("Enable when GetRecipes is implemented")
 
-	testUserUUID := uuid.Must(uuid.NewV4())
-	req := httptest.NewRequest("GET", "/api/recipes?user_uuid="+testUserUUID.String(), nil)
+	req := httptest.NewRequest("GET", "/api/recipes?email=test@example.com", nil)
 	w := httptest.NewRecorder()
 
 	GetRecipes(w, req)
@@ -50,7 +49,7 @@ func TestGetRecipes_ReturnsJSON(t *testing.T) {
 	}
 }
 
-func TestGetRecipes_MissingUserUUID(t *testing.T) {
+func TestGetRecipes_MissingEmail(t *testing.T) {
 	t.Skip("Enable when GetRecipes is implemented")
 
 	req := httptest.NewRequest("GET", "/api/recipes", nil)
@@ -61,9 +60,9 @@ func TestGetRecipes_MissingUserUUID(t *testing.T) {
 	resp := w.Result()
 	defer resp.Body.Close()
 
-	// Should return error for missing user_uuid
+	// Should return error for missing email
 	if resp.StatusCode == http.StatusOK {
-		t.Error("Expected error status for missing user_uuid")
+		t.Error("Expected error status for missing email")
 	}
 }
 
@@ -74,7 +73,7 @@ func TestCreateRecipe_MissingName(t *testing.T) {
 	writer := multipart.NewWriter(body)
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/api/recipes?tagString=test", body)
+	req := httptest.NewRequest("POST", "/api/recipes?email=test@example.com&tagString=test", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
@@ -102,7 +101,7 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/api/recipes?name=TestRecipe&tagString=dinner,quick", body)
+	req := httptest.NewRequest("POST", "/api/recipes?email=test@example.com&name=TestRecipe&tagString=dinner,quick", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
@@ -144,7 +143,7 @@ func TestCreateRecipe_MultipleFiles(t *testing.T) {
 	}
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/api/recipes?name=MultiPageRecipe&tagString=cookbook", body)
+	req := httptest.NewRequest("POST", "/api/recipes?email=test@example.com&name=MultiPageRecipe&tagString=cookbook", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 

@@ -28,7 +28,7 @@ function setParams(tag: string, recipe: string) {
   window.history.replaceState(null, '', url)
 }
 
-export function Browse({ userUUID, email, onNavigateHome }: Props) {
+export function Browse({ email, onNavigateHome }: Props) {
   const initialParams = getParams()
   const [recipes, setRecipes] = useState<RecipeWithFiles[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,7 +38,7 @@ export function Browse({ userUUID, email, onNavigateHome }: Props) {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    getRecipes(userUUID)
+    getRecipes(email)
       .then((response) => {
         const recipesWithFiles = response.recipeData.map((recipe) => ({
           ...recipe,
@@ -54,7 +54,7 @@ export function Browse({ userUUID, email, onNavigateHome }: Props) {
       .finally(() => {
         setLoading(false)
       })
-  }, [userUUID])
+  }, [email])
 
   useEffect(() => {
     setParams(tagFilter, selectedRecipeId)

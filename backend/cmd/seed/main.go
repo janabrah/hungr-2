@@ -8,14 +8,13 @@ import (
 	"os"
 
 	"github.com/cobyabrahams/hungr/storage"
-	"github.com/gofrs/uuid"
 )
 
-var testUserUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
+const testUserEmail = "coby@hungr.com"
 
 var recipes = []struct {
-	name     string
-	tags     string
+	name      string
+	tags      string
 	imageURLs []string
 }{
 	{
@@ -72,8 +71,18 @@ func main() {
 
 	fmt.Println("Seeding database...")
 
+	// Create test user if not exists
+	_, err := storage.GetUserByEmail(testUserEmail)
+	if err != nil {
+		_, err = storage.CreateUser(testUserEmail, "Test User")
+		if err != nil {
+			log.Fatal("Failed to create test user: ", err)
+		}
+		fmt.Println("Created test user:", testUserEmail)
+	}
+
 	for _, r := range recipes {
-		recipe, err := storage.InsertRecipe(r.name, testUserUUID, r.tags)
+		recipe, err := storage.InsertRecipeByEmail(r.name, testUserEmail, r.tags)
 		if err != nil {
 			log.Printf("Failed to insert recipe %q: %v", r.name, err)
 			continue
@@ -109,7 +118,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nDone! Test user UUID: %s\n", testUserUUID)
+	fmt.Printf("\nDone! Test user email: %s\n", testUserEmail)
 }
 
 func fetchImage(url string) ([]byte, string, error) {

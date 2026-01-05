@@ -7,6 +7,18 @@ import (
 	"github.com/gofrs/uuid"
 )
 
+const testEmail = "test@example.com"
+
+func ensureTestUser(t *testing.T) {
+	_, err := GetUserByEmail(testEmail)
+	if err != nil {
+		_, err = CreateUser(testEmail, "Test User")
+		if err != nil {
+			t.Fatalf("Failed to create test user: %v", err)
+		}
+	}
+}
+
 func TestCreateTagUUID(t *testing.T) {
 	tests := []struct {
 		tag string
@@ -53,13 +65,13 @@ func skipIfNoDatabase(t *testing.T) {
 	}
 }
 
-func TestGetRecipesByUserUUID(t *testing.T) {
+func TestGetRecipesByUserEmail(t *testing.T) {
 	skipIfNoDatabase(t)
+	ensureTestUser(t)
 
-	testUserUUID := uuid.Must(uuid.NewV4())
-	recipes, err := GetRecipesByUserUUID(testUserUUID)
+	recipes, err := GetRecipesByUserEmail(testEmail)
 	if err != nil {
-		t.Fatalf("GetRecipesByUserUUID failed: %v", err)
+		t.Fatalf("GetRecipesByUserEmail failed: %v", err)
 	}
 
 	if recipes == nil {
@@ -67,13 +79,13 @@ func TestGetRecipesByUserUUID(t *testing.T) {
 	}
 }
 
-func TestInsertRecipe(t *testing.T) {
+func TestInsertRecipeByEmail(t *testing.T) {
 	skipIfNoDatabase(t)
+	ensureTestUser(t)
 
-	testUserUUID := uuid.Must(uuid.NewV4())
-	recipe, err := InsertRecipe("test-recipe", testUserUUID, "test, tags")
+	recipe, err := InsertRecipeByEmail("test-recipe", testEmail, "test, tags")
 	if err != nil {
-		t.Fatalf("InsertRecipe failed: %v", err)
+		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
 
 	if recipe == nil {
@@ -89,11 +101,11 @@ func TestInsertRecipe(t *testing.T) {
 
 func TestInsertAndGetFile(t *testing.T) {
 	skipIfNoDatabase(t)
+	ensureTestUser(t)
 
-	userUUID := uuid.Must(uuid.NewV4())
-	recipe, err := InsertRecipe("file-test", userUUID, "test")
+	recipe, err := InsertRecipeByEmail("file-test", testEmail, "test")
 	if err != nil {
-		t.Fatalf("InsertRecipe failed: %v", err)
+		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
 
 	testData := []byte("fake image data")
@@ -156,11 +168,11 @@ func TestUpsertTag(t *testing.T) {
 
 func TestMultipleFilesPerRecipe(t *testing.T) {
 	skipIfNoDatabase(t)
+	ensureTestUser(t)
 
-	userUUID := uuid.Must(uuid.NewV4())
-	recipe, err := InsertRecipe("multi-file-test", userUUID, "test")
+	recipe, err := InsertRecipeByEmail("multi-file-test", testEmail, "test")
 	if err != nil {
-		t.Fatalf("InsertRecipe failed: %v", err)
+		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
 
 	for i := 0; i < 3; i++ {
@@ -184,11 +196,11 @@ func TestMultipleFilesPerRecipe(t *testing.T) {
 
 func TestDeleteRecipe(t *testing.T) {
 	skipIfNoDatabase(t)
+	ensureTestUser(t)
 
-	userUUID := uuid.Must(uuid.NewV4())
-	recipe, err := InsertRecipe("delete-test", userUUID, "test")
+	recipe, err := InsertRecipeByEmail("delete-test", testEmail, "test")
 	if err != nil {
-		t.Fatalf("InsertRecipe failed: %v", err)
+		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
 
 	_, err = InsertFile(recipe.UUID, []byte("file data"), "image/jpeg", 0, true)
@@ -201,9 +213,9 @@ func TestDeleteRecipe(t *testing.T) {
 		t.Fatalf("DeleteRecipe failed: %v", err)
 	}
 
-	recipes, err := GetRecipesByUserUUID(userUUID)
+	recipes, err := GetRecipesByUserEmail(testEmail)
 	if err != nil {
-		t.Fatalf("GetRecipesByUserUUID failed: %v", err)
+		t.Fatalf("GetRecipesByUserEmail failed: %v", err)
 	}
 	for _, r := range recipes {
 		if r.UUID == recipe.UUID {

@@ -19,11 +19,13 @@ func Init(connString string) error {
 	return err
 }
 
-func GetRecipesByUserUUID(userUUID uuid.UUID) ([]models.Recipe, error) {
+func GetRecipesByUserEmail(email string) ([]models.Recipe, error) {
 	rows, err := db.Query(context.Background(),
-		`SELECT uuid, name, user_uuid, tag_string, created_at
-		 FROM recipes WHERE user_uuid = $1
-		 ORDER BY created_at DESC LIMIT 100`, userUUID)
+		`SELECT r.uuid, r.name, r.user_uuid, r.tag_string, r.created_at
+		 FROM recipes r
+		 JOIN users u ON r.user_uuid = u.uuid
+		 WHERE u.email = $1
+		 ORDER BY r.created_at DESC LIMIT 100`, email)
 	if err != nil {
 		return nil, err
 	}
@@ -65,13 +67,14 @@ func GetFilesByRecipeUUIDs(recipeUUIDs []uuid.UUID) ([]models.File, error) {
 	return files, rows.Err()
 }
 
-func InsertRecipe(name string, user uuid.UUID, tagString string) (*models.Recipe, error) {
+func InsertRecipeByEmail(name string, email string, tagString string) (*models.Recipe, error) {
 	var r models.Recipe
 	err := db.QueryRow(context.Background(),
 		`INSERT INTO recipes (name, user_uuid, tag_string)
-		 VALUES ($1, $2, $3)
+		 SELECT $1, u.uuid, $2
+		 FROM users u WHERE u.email = $3
 		 RETURNING uuid, name, user_uuid, tag_string, created_at`,
-		name, user, tagString).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt)
+		name, tagString, email).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
