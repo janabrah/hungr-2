@@ -2,13 +2,15 @@ import { clearEmail } from '../auth'
 import { Header } from '../components/Header'
 import type { Email } from '../branded'
 
+type Page = 'home' | 'upload' | 'browse'
+
 type Props = {
-  onNavigate: (page: 'upload' | 'browse') => void
+  onNavigate: (page: Page) => void
   email: Email
-  onNavigateHome: () => void
+  currentPage: Page
 }
 
-export function Home({ onNavigate, email, onNavigateHome }: Props) {
+export function Home({ onNavigate, email, currentPage }: Props) {
   const handleLogout = () => {
     clearEmail()
     window.location.reload()
@@ -16,7 +18,7 @@ export function Home({ onNavigate, email, onNavigateHome }: Props) {
 
   return (
     <>
-      <Header email={email} onNavigateHome={onNavigateHome} />
+      <Header email={email} currentPage={currentPage} onNavigate={onNavigate} />
       <div className="center" style={{ minHeight: 'calc(100vh - 60px)' }}>
         <h1>Welcome to Hungr!</h1>
         <p>Would you like to upload a recipe or browse recipes?</p>

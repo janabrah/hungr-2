@@ -123,18 +123,56 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
 .header-logo {
-  font-size: 1.5rem;
-  font-weight: bold;
   background: none;
   border: none;
-  color: var(--foreground);
   cursor: pointer;
   padding: 0;
+  display: flex;
+  align-items: center;
 }
 
 .header-logo:hover {
   opacity: 0.7;
+}
+
+.header-icon {
+  height: 32px;
+  width: auto;
+}
+
+.header-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header-nav-btn {
+  background: none;
+  border: none;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border-radius: 0.25rem;
+  opacity: 0.7;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.header-nav-btn:hover {
+  opacity: 1;
+  background-color: var(--border);
+}
+
+.header-nav-btn.active {
+  opacity: 1;
+  background-color: var(--border);
+  font-weight: 500;
 }
 
 .header-email {
