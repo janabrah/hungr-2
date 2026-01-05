@@ -34,3 +34,10 @@ export interface UploadResponse {
   recipe: Recipe;
   tags: Tag[];
 }
+export interface RecipeStep {
+  instruction: string;
+  ingredients: string[];
+}
+export interface RecipeStepsResponse {
+  steps: RecipeStep[];
+}

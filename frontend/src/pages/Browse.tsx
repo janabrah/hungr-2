@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { getRecipes, getFileURL, deleteRecipe } from '../api'
+import { getRecipes, getFileURL, deleteRecipe, getRecipeSteps, updateRecipeSteps } from '../api'
 import { Header } from '../components/Header'
-import type { Recipe, File } from '../types.gen'
+import { RecipeSteps } from '../components/RecipeSteps'
+import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
+import type { Recipe, File, RecipeStep } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 
 type Page = 'home' | 'upload' | 'browse'
@@ -39,6 +41,10 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(initialParams.recipe)
   const [tagFilter, setTagFilter] = useState(initialParams.tag)
   const [deleting, setDeleting] = useState(false)
+  const [steps, setSteps] = useState<RecipeStep[]>([])
+  const [loadingSteps, setLoadingSteps] = useState(false)
+  const [editingSteps, setEditingSteps] = useState(false)
+  const [savingSteps, setSavingSteps] = useState(false)
 
   useEffect(() => {
     getRecipes(email)
@@ -62,6 +68,39 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   useEffect(() => {
     setParams(tagFilter, selectedRecipeId)
   }, [tagFilter, selectedRecipeId])
+
+  useEffect(() => {
+    if (selectedRecipeId === '') {
+      setSteps([])
+      setEditingSteps(false)
+      return
+    }
+    setLoadingSteps(true)
+    setEditingSteps(false)
+    getRecipeSteps(asUUID(selectedRecipeId))
+      .then((response) => {
+        setSteps(response.steps)
+      })
+      .catch(() => {
+        setSteps([])
+      })
+      .finally(() => {
+        setLoadingSteps(false)
+      })
+  }, [selectedRecipeId])
+
+  const handleSaveSteps = async (newSteps: RecipeStep[]) => {
+    setSavingSteps(true)
+    try {
+      await updateRecipeSteps(asUUID(selectedRecipeId), newSteps)
+      setSteps(newSteps)
+      setEditingSteps(false)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to save steps')
+    } finally {
+      setSavingSteps(false)
+    }
+  }
 
   const filteredRecipes = tagFilter === ''
     ? recipes
@@ -144,6 +183,26 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
               </button>
             </div>
             <p>Tags: {selectedRecipe.tag_string}</p>
+            <div className="flex-row" style={{ alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
+              <h3 style={{ margin: 0 }}>Steps</h3>
+              {!editingSteps && !loadingSteps && (
+                <button className="btn" onClick={() => setEditingSteps(true)}>
+                  Edit
+                </button>
+              )}
+            </div>
+            {loadingSteps ? (
+              <p>Loading steps...</p>
+            ) : editingSteps ? (
+              <RecipeStepsEditor
+                steps={steps}
+                onSave={handleSaveSteps}
+                onCancel={() => setEditingSteps(false)}
+                saving={savingSteps}
+              />
+            ) : (
+              <RecipeSteps steps={steps} />
+            )}
             {selectedRecipe.files.map((file) => (
               <img
                 key={file.uuid}
