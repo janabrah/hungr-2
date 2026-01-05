@@ -1,24 +1,22 @@
 Short term:
-- Multiple images per recipe [In progress]
-- Differentiate users
-- Store links instead of screenshots
 - Edit tags for live recipe
+- Edit recipe name
+- Reorder pages in multi-file recipes
 
 Medium term:
 - Sharing between users
 - Ratings (searchable)
-- OCR and text recipes
-- - Auto tagging (vegetarian, easy, etc)
-- - Nice rendering
-- - Ingredients, instructions, notes
-- - - Users add notes
+- OCR for uploaded recipe images
+- Auto tagging (vegetarian, easy, etc) via AI
+- Nice rendering of extracted recipe text
+- Users add notes to recipes
 - Pictures of completed recipes
-- Ability to edit other data in a live recipe (inspired by wanting to change the page order in multi-file recipes)
 - Support for video recipes (instagram, tiktok, etc)
 
 Long term:
 - Feed
-
+- Meal planning / calendar integration
 
 Bugs:
 - Searching by tag after the first tag only searches the already-filtered list
+- Some pre-existing lint errors in frontend components (void expression warnings)
