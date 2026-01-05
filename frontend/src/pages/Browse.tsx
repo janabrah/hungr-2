@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import { getRecipes, getFileURL, deleteRecipe } from '../api'
 import type { Recipe, File } from '../types.gen'
 
-const USER_UUID = '11111111-1111-1111-1111-111111111111'
-
 type Props = {
   onNavigate: (page: 'home') => void
+  userUUID: string
 }
 
 type RecipeWithFiles = Recipe & { files: File[] }
@@ -27,7 +26,7 @@ function setParams(tag: string, recipe: string) {
   window.history.replaceState(null, '', url)
 }
 
-export function Browse({ onNavigate }: Props) {
+export function Browse({ onNavigate, userUUID }: Props) {
   const initialParams = getParams()
   const [recipes, setRecipes] = useState<RecipeWithFiles[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,7 +36,7 @@ export function Browse({ onNavigate }: Props) {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    getRecipes(USER_UUID)
+    getRecipes(userUUID)
       .then((response) => {
         const recipesWithFiles = response.recipeData.map((recipe) => ({
           ...recipe,
@@ -53,7 +52,7 @@ export function Browse({ onNavigate }: Props) {
       .finally(() => {
         setLoading(false)
       })
-  }, [])
+  }, [userUUID])
 
   useEffect(() => {
     setParams(tagFilter, selectedRecipeId)
