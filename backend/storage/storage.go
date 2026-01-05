@@ -154,3 +154,63 @@ func CreateTagUUID(tag string) uuid.UUID {
 	namespace := uuid.Must(uuid.FromString(tagNamespace))
 	return uuid.NewV5(namespace, tag)
 }
+
+// User storage functions
+
+func GetUserByUUID(userUUID uuid.UUID) (*models.User, error) {
+	var u models.User
+	err := db.QueryRow(context.Background(),
+		`SELECT uuid, email, name, created_at
+		 FROM users WHERE uuid = $1`, userUUID).Scan(
+		&u.UUID, &u.Email, &u.Name, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func GetUserByEmail(email string) (*models.User, error) {
+	var u models.User
+	err := db.QueryRow(context.Background(),
+		`SELECT uuid, email, name, created_at
+		 FROM users WHERE email = $1`, email).Scan(
+		&u.UUID, &u.Email, &u.Name, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func CreateUser(email, name string) (*models.User, error) {
+	var u models.User
+	err := db.QueryRow(context.Background(),
+		`INSERT INTO users (email, name)
+		 VALUES ($1, $2)
+		 RETURNING uuid, email, name, created_at`,
+		email, name).Scan(
+		&u.UUID, &u.Email, &u.Name, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func UpdateUser(userUUID uuid.UUID, name string) (*models.User, error) {
+	var u models.User
+	err := db.QueryRow(context.Background(),
+		`UPDATE users SET name = $1
+		 WHERE uuid = $2
+		 RETURNING uuid, email, name, created_at`,
+		name, userUUID).Scan(
+		&u.UUID, &u.Email, &u.Name, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func DeleteUser(userUUID uuid.UUID) error {
+	_, err := db.Exec(context.Background(),
+		`DELETE FROM users WHERE uuid = $1`, userUUID)
+	return err
+}
