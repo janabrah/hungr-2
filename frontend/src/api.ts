@@ -1,4 +1,4 @@
-import type { RecipesResponse, UploadResponse } from './types.gen'
+import type { RecipesResponse, UploadResponse, RecipeStepsResponse } from './types.gen'
 import type { Email, UUID } from './branded'
 
 export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
@@ -61,5 +61,25 @@ export async function deleteRecipe(recipeUUID: UUID): Promise<void> {
 
   if (!response.ok) {
     throw new Error(`Failed to delete recipe: ${response.status.toString()}`)
+  }
+}
+
+export async function getRecipeSteps(recipeUUID: UUID): Promise<RecipeStepsResponse> {
+  const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}/steps`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch recipe steps: ${response.status.toString()}`)
+  }
+  return response.json() as Promise<RecipeStepsResponse>
+}
+
+export async function updateRecipeSteps(recipeUUID: UUID, steps: RecipeStepsResponse['steps']): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}/steps`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steps }),
+  })
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(data.error ?? `Failed to update recipe steps: ${response.status.toString()}`)
   }
 }
