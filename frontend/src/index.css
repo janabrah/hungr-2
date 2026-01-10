@@ -57,6 +57,12 @@ body {
   color: #ffffff;
 }
 
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+}
+
 .input {
   display: block;
   width: 100%;
@@ -113,6 +119,10 @@ body {
 
 .error {
   color: #ef4444;
+}
+
+.success {
+  color: #22c55e;
 }
 
 .header {

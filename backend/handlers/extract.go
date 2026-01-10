@@ -3,6 +3,7 @@ package handlers
 import (
 	"bufio"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +20,17 @@ import (
 type ExtractRequest struct {
 	URL string `json:"url"`
 }
+
+const extractImageSystemPrompt = `You are a recipe extraction assistant. Given an image of a recipe (such as a photo from a cookbook, a handwritten recipe card, or a screenshot), extract the recipe steps and ingredients into a structured JSON format.
+
+Rules:
+1. ALWAYS start with a step that has an empty instruction "" containing ALL ingredients from the recipe. This must be the first element in the steps array.
+2. Then add additional steps for the actual cooking instructions (these steps should have empty ingredients arrays since all ingredients are in the first step).
+3. Format ingredients as "quantity unit ingredient" (e.g., "2 cups flour", "1 tsp salt", "3 eggs")
+4. Use standard cooking units: tsp, tbsp, cup, oz, lb, g, kg, ml, l
+5. For countable items without units, just use the number and name (e.g., "2 eggs", "1 onion")
+6. Do NOT include temperatures (e.g., "350°F", "180°C") - these are not ingredients
+7. If the image is unclear or partially visible, extract what you can see`
 
 type openAIRequest struct {
 	Model          string           `json:"model"`
@@ -38,8 +50,18 @@ type jsonSchema struct {
 }
 
 type openAIMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string      `json:"role"`
+	Content interface{} `json:"content"` // string for text, []contentPart for vision
+}
+
+type contentPart struct {
+	Type     string    `json:"type"`
+	Text     string    `json:"text,omitempty"`
+	ImageURL *imageURL `json:"image_url,omitempty"`
+}
+
+type imageURL struct {
+	URL string `json:"url"`
 }
 
 type openAIResponse struct {
@@ -121,6 +143,192 @@ func ExtractRecipe(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
+}
+
+func ExtractRecipeFromImage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if r.Method != "POST" {
+		respondWithError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	// Parse multipart form (max 50MB for multiple images)
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		respondWithError(w, http.StatusBadRequest, "failed to parse form: "+err.Error())
+		return
+	}
+
+	files := r.MultipartForm.File["images"]
+	if len(files) == 0 {
+		respondWithError(w, http.StatusBadRequest, "at least one image file is required")
+		return
+	}
+
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		logger.Error(ctx, "OPENAI_API_KEY not set", fmt.Errorf("missing env var"))
+		respondWithError(w, http.StatusInternalServerError, "recipe extraction not configured")
+		return
+	}
+
+	model := os.Getenv("OPENAI_MODEL")
+	if model == "" {
+		model = "gpt-5.2"
+	}
+
+	var imageDataURLs []string
+	for _, header := range files {
+		contentType := header.Header.Get("Content-Type")
+		if !strings.HasPrefix(contentType, "image/") {
+			respondWithError(w, http.StatusBadRequest, fmt.Sprintf("file %s must be an image", header.Filename))
+			return
+		}
+
+		file, err := header.Open()
+		if err != nil {
+			logger.Error(ctx, "failed to open image", err, "filename", header.Filename)
+			respondWithError(w, http.StatusInternalServerError, "failed to read image")
+			return
+		}
+
+		imageData, err := io.ReadAll(file)
+		file.Close()
+		if err != nil {
+			logger.Error(ctx, "failed to read image", err, "filename", header.Filename)
+			respondWithError(w, http.StatusInternalServerError, "failed to read image")
+			return
+		}
+
+		base64Image := base64.StdEncoding.EncodeToString(imageData)
+		dataURL := fmt.Sprintf("data:%s;base64,%s", contentType, base64Image)
+		imageDataURLs = append(imageDataURLs, dataURL)
+
+		logger.Info(ctx, "processed image", "filename", header.Filename, "size", len(imageData))
+	}
+
+	logger.Info(ctx, "extracting recipe from images", "count", len(imageDataURLs), "model", model)
+
+	// Extract recipe using OpenAI Vision
+	result, err := extractRecipeFromImageWithOpenAI(apiKey, model, imageDataURLs)
+	if err != nil {
+		logger.Error(ctx, "failed to extract recipe from images", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to extract recipe: "+err.Error())
+		return
+	}
+	logger.Info(ctx, "OpenAI image extraction complete", "steps", len(result.Steps))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func extractRecipeFromImageWithOpenAI(apiKey, model string, imageDataURLs []string) (*models.RecipeStepsResponse, error) {
+	schema := map[string]interface{}{
+		"type": "object",
+		"properties": map[string]interface{}{
+			"steps": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"instruction": map[string]interface{}{
+							"type":        "string",
+							"description": "The step instruction. Empty string if this is just an ingredients list.",
+						},
+						"ingredients": map[string]interface{}{
+							"type": "array",
+							"items": map[string]interface{}{
+								"type":        "string",
+								"description": "Ingredient in format 'quantity unit name' (e.g., '2 cups flour', '1 tsp salt', '3 eggs')",
+							},
+							"description": "Ingredients used in this step",
+						},
+					},
+					"required":             []string{"instruction", "ingredients"},
+					"additionalProperties": false,
+				},
+			},
+		},
+		"required":             []string{"steps"},
+		"additionalProperties": false,
+	}
+
+	// Vision API uses array content format - start with text prompt
+	promptText := "Extract the recipe from these images. Include all ingredients and cooking steps you can see."
+	if len(imageDataURLs) == 1 {
+		promptText = "Extract the recipe from this image. Include all ingredients and cooking steps you can see."
+	}
+
+	userContent := []contentPart{
+		{Type: "text", Text: promptText},
+	}
+	// Add all images
+	for _, dataURL := range imageDataURLs {
+		userContent = append(userContent, contentPart{Type: "image_url", ImageURL: &imageURL{URL: dataURL}})
+	}
+
+	reqBody := openAIRequest{
+		Model: model,
+		Messages: []openAIMessage{
+			{Role: "system", Content: extractImageSystemPrompt},
+			{Role: "user", Content: userContent},
+		},
+		ResponseFormat: &responseFormat{
+			Type: "json_schema",
+			JSONSchema: &jsonSchema{
+				Name:   "recipe_steps",
+				Strict: true,
+				Schema: schema,
+			},
+		},
+	}
+
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: 90 * time.Second} // Longer timeout for image processing
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var openAIResp openAIResponse
+	if err := json.Unmarshal(body, &openAIResp); err != nil {
+		return nil, fmt.Errorf("failed to parse OpenAI response: %v", err)
+	}
+
+	if openAIResp.Error != nil {
+		return nil, fmt.Errorf("OpenAI API error: %s", openAIResp.Error.Message)
+	}
+
+	if len(openAIResp.Choices) == 0 {
+		return nil, fmt.Errorf("no response from OpenAI")
+	}
+
+	responseContent := openAIResp.Choices[0].Message.Content
+
+	var result models.RecipeStepsResponse
+	if err := json.Unmarshal([]byte(responseContent), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse recipe JSON: %v", err)
+	}
+
+	return &result, nil
 }
 
 func fetchAndExtractText(url string) (string, error) {

@@ -91,8 +91,25 @@ export async function extractRecipeFromURL(url: string): Promise<RecipeStepsResp
     body: JSON.stringify({ url }),
   })
   if (!response.ok) {
-    const data = await response.json().catch(() => ({})) as { error?: string }
+    const data = (await response.json().catch(() => ({}))) as { error?: string }
     throw new Error(data.error ?? `Failed to extract recipe: ${response.status.toString()}`)
+  }
+  return response.json() as Promise<RecipeStepsResponse>
+}
+
+export async function extractRecipeFromImages(files: File[]): Promise<RecipeStepsResponse> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('images', file)
+  }
+
+  const response = await fetch(`${API_BASE}/api/extract-recipe-image`, {
+    method: 'POST',
+    body: formData,
+  })
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string }
+    throw new Error(data.error ?? `Failed to extract recipe from image: ${response.status.toString()}`)
   }
   return response.json() as Promise<RecipeStepsResponse>
 }
