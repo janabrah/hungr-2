@@ -76,19 +76,16 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 
 	files := r.MultipartForm.File["file"]
 
-	recipe, err := storage.InsertRecipeByEmail(name, email, tagString)
-	if err != nil {
-		logger.Error(ctx, "failed to insert recipe", err, "email", email, "name", name)
-		respondWithError(w, http.StatusInternalServerError, "failed to create recipe - user may not exist")
-		return
+	// Read all file data before starting transaction
+	type fileData struct {
+		data        []byte
+		contentType string
 	}
-
-	logger.Info(ctx, "recipe created", "recipe_uuid", recipe.UUID, "email", email)
-
+	filesData := make([]fileData, 0, len(files))
 	for i, fileHeader := range files {
 		file, err := fileHeader.Open()
 		if err != nil {
-			logger.Error(ctx, "failed to open uploaded file", err, "recipe_uuid", recipe.UUID, "file_index", i)
+			logger.Error(ctx, "failed to open uploaded file", err, "email", email, "file_index", i)
 			respondWithError(w, http.StatusInternalServerError, "failed to process uploaded file")
 			return
 		}
@@ -96,7 +93,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		data, err := io.ReadAll(file)
 		file.Close()
 		if err != nil {
-			logger.Error(ctx, "failed to read uploaded file", err, "recipe_uuid", recipe.UUID, "file_index", i)
+			logger.Error(ctx, "failed to read uploaded file", err, "email", email, "file_index", i)
 			respondWithError(w, http.StatusInternalServerError, "failed to read uploaded file")
 			return
 		}
@@ -105,8 +102,29 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		if contentType == "" {
 			contentType = "image/jpeg"
 		}
+		filesData = append(filesData, fileData{data: data, contentType: contentType})
+	}
 
-		_, err = storage.InsertFile(recipe.UUID, data, contentType, i, true)
+	// Start transaction
+	tx, err := storage.BeginTx(ctx)
+	if err != nil {
+		logger.Error(ctx, "failed to begin transaction", err, "email", email)
+		respondWithError(w, http.StatusInternalServerError, "failed to create recipe")
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	recipe, err := storage.TxInsertRecipeByEmail(ctx, tx, name, email, tagString)
+	if err != nil {
+		logger.Error(ctx, "failed to insert recipe", err, "email", email, "name", name)
+		respondWithError(w, http.StatusInternalServerError, "failed to create recipe - user may not exist")
+		return
+	}
+
+	logger.Info(ctx, "recipe created", "recipe_uuid", recipe.UUID, "email", email)
+
+	for i, fd := range filesData {
+		_, err = storage.TxInsertFile(ctx, tx, recipe.UUID, fd.data, fd.contentType, i, true)
 		if err != nil {
 			logger.Error(ctx, "failed to store file", err, "recipe_uuid", recipe.UUID, "file_index", i)
 			respondWithError(w, http.StatusInternalServerError, "failed to store file")
@@ -124,7 +142,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 			}
 
 			tagUUID := storage.CreateTagUUID(tagName)
-			tag, err := storage.UpsertTag(tagUUID, tagName)
+			tag, err := storage.TxUpsertTag(ctx, tx, tagUUID, tagName)
 			if err != nil {
 				logger.Error(ctx, "failed to upsert tag", err, "recipe_uuid", recipe.UUID, "tag", tagName)
 				respondWithError(w, http.StatusInternalServerError, "failed to create tag")
@@ -132,12 +150,19 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 			}
 			insertedTags = append(insertedTags, *tag)
 
-			if err := storage.InsertRecipeTag(recipe.UUID, tagUUID); err != nil {
+			if err := storage.TxInsertRecipeTag(ctx, tx, recipe.UUID, tagUUID); err != nil {
 				logger.Error(ctx, "failed to link tag to recipe", err, "recipe_uuid", recipe.UUID, "tag_uuid", tagUUID)
 				respondWithError(w, http.StatusInternalServerError, "failed to link tag")
 				return
 			}
 		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		logger.Error(ctx, "failed to commit transaction", err, "recipe_uuid", recipe.UUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to create recipe")
+		return
 	}
 
 	response := models.UploadResponse{

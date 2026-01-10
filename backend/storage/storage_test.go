@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -229,5 +230,119 @@ func TestDeleteRecipe(t *testing.T) {
 	}
 	if len(files) != 0 {
 		t.Errorf("Expected 0 files after recipe deletion, got %d", len(files))
+	}
+}
+
+func TestTransactionCommit(t *testing.T) {
+	skipIfNoDatabase(t)
+	ensureTestUser(t)
+
+	ctx := context.Background()
+
+	tx, err := BeginTx(ctx)
+	if err != nil {
+		t.Fatalf("BeginTx failed: %v", err)
+	}
+
+	// Insert recipe in transaction
+	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-commit-test", testEmail, "transaction, test")
+	if err != nil {
+		tx.Rollback(ctx)
+		t.Fatalf("TxInsertRecipeByEmail failed: %v", err)
+	}
+
+	// Insert file in transaction
+	_, err = TxInsertFile(ctx, tx, recipe.UUID, []byte("tx file data"), "image/png", 0, true)
+	if err != nil {
+		tx.Rollback(ctx)
+		t.Fatalf("TxInsertFile failed: %v", err)
+	}
+
+	// Insert tag in transaction
+	tagUUID := CreateTagUUID("tx-test-tag")
+	_, err = TxUpsertTag(ctx, tx, tagUUID, "tx-test-tag")
+	if err != nil {
+		tx.Rollback(ctx)
+		t.Fatalf("TxUpsertTag failed: %v", err)
+	}
+
+	err = TxInsertRecipeTag(ctx, tx, recipe.UUID, tagUUID)
+	if err != nil {
+		tx.Rollback(ctx)
+		t.Fatalf("TxInsertRecipeTag failed: %v", err)
+	}
+
+	// Commit
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("Commit failed: %v", err)
+	}
+
+	// Verify recipe exists after commit
+	foundRecipe, err := GetRecipeByUUID(recipe.UUID)
+	if err != nil {
+		t.Fatalf("GetRecipeByUUID failed: %v", err)
+	}
+	if foundRecipe.Name != "tx-commit-test" {
+		t.Errorf("Expected name 'tx-commit-test', got %q", foundRecipe.Name)
+	}
+
+	// Verify file exists after commit
+	files, err := GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
+	if err != nil {
+		t.Fatalf("GetFilesByRecipeUUIDs failed: %v", err)
+	}
+	if len(files) != 1 {
+		t.Errorf("Expected 1 file after commit, got %d", len(files))
+	}
+
+	// Cleanup
+	DeleteRecipe(recipe.UUID)
+}
+
+func TestTransactionRollback(t *testing.T) {
+	skipIfNoDatabase(t)
+	ensureTestUser(t)
+
+	ctx := context.Background()
+
+	tx, err := BeginTx(ctx)
+	if err != nil {
+		t.Fatalf("BeginTx failed: %v", err)
+	}
+
+	// Insert recipe in transaction
+	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-rollback-test", testEmail, "rollback, test")
+	if err != nil {
+		tx.Rollback(ctx)
+		t.Fatalf("TxInsertRecipeByEmail failed: %v", err)
+	}
+
+	// Insert file in transaction
+	_, err = TxInsertFile(ctx, tx, recipe.UUID, []byte("rollback file data"), "image/png", 0, true)
+	if err != nil {
+		tx.Rollback(ctx)
+		t.Fatalf("TxInsertFile failed: %v", err)
+	}
+
+	// Rollback instead of commit
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("Rollback failed: %v", err)
+	}
+
+	// Verify recipe does NOT exist after rollback
+	_, err = GetRecipeByUUID(recipe.UUID)
+	if err == nil {
+		t.Error("Expected error getting recipe after rollback, but got nil")
+		// Cleanup if it somehow exists
+		DeleteRecipe(recipe.UUID)
+	}
+
+	// Verify no files exist for the rolled-back recipe
+	files, err := GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
+	if err != nil {
+		t.Fatalf("GetFilesByRecipeUUIDs failed: %v", err)
+	}
+	if len(files) != 0 {
+		t.Errorf("Expected 0 files after rollback, got %d", len(files))
 	}
 }

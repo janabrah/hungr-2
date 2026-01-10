@@ -68,6 +68,17 @@ func InsertRecipeByEmail(name string, email string, tagString string) (*models.R
 	return &r, nil
 }
 
+// TxInsertRecipeByEmail inserts a recipe within a transaction
+func TxInsertRecipeByEmail(ctx context.Context, tx *Tx, name string, email string, tagString string) (*models.Recipe, error) {
+	var r models.Recipe
+	err := tx.tx.QueryRow(ctx, queryInsertRecipeByEmail,
+		name, tagString, email).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
+}
+
 func DeleteRecipe(recipeUUID uuid.UUID) error {
 	tx, err := db.Begin(context.Background())
 	if err != nil {

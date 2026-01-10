@@ -37,6 +37,22 @@ func InsertRecipeTag(recipeUUID, tagUUID uuid.UUID) error {
 	return err
 }
 
+// TxUpsertTag upserts a tag within a transaction
+func TxUpsertTag(ctx context.Context, tx *Tx, tagUUID uuid.UUID, name string) (*models.Tag, error) {
+	var t models.Tag
+	err := tx.tx.QueryRow(ctx, queryUpsertTag, tagUUID, name).Scan(&t.UUID, &t.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+// TxInsertRecipeTag inserts a recipe-tag link within a transaction
+func TxInsertRecipeTag(ctx context.Context, tx *Tx, recipeUUID, tagUUID uuid.UUID) error {
+	_, err := tx.tx.Exec(ctx, queryInsertRecipeTag, recipeUUID, tagUUID)
+	return err
+}
+
 func CreateTagUUID(tag string) uuid.UUID {
 	namespace := uuid.Must(uuid.FromString(tagNamespace))
 	return uuid.NewV5(namespace, tag)

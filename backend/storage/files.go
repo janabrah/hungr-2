@@ -65,6 +65,26 @@ func InsertFile(recipeUUID uuid.UUID, data []byte, contentType string, pageNumbe
 	return &f, nil
 }
 
+// TxInsertFile inserts a file within a transaction
+func TxInsertFile(ctx context.Context, tx *Tx, recipeUUID uuid.UUID, data []byte, contentType string, pageNumber int, isImage bool) (*models.File, error) {
+	var f models.File
+	var fileUUID uuid.UUID
+	err := tx.tx.QueryRow(ctx, queryInsertFile,
+		recipeUUID, data, contentType, pageNumber, isImage).Scan(&fileUUID, &f.RecipeUUID, &f.PageNumber, &f.Image)
+	if err != nil {
+		return nil, err
+	}
+	f.UUID = fileUUID
+	f.URL = fmt.Sprintf("/api/files/%s", fileUUID.String())
+	f.Image = isImage
+
+	_, err = tx.tx.Exec(ctx, queryUpdateFileURL, f.URL, fileUUID)
+	if err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
 func GetFileData(fileUUID uuid.UUID) ([]byte, string, error) {
 	var data []byte
 	var contentType string
