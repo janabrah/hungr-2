@@ -165,7 +165,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
             </option>
             {filteredRecipes.map((recipe) => (
               <option key={recipe.uuid} value={recipe.uuid}>
-                {recipe.name} - {recipe.tag_string}
+                {recipe.name}{recipe.tag_string ? ` - ${recipe.tag_string}` : ''}
               </option>
             ))}
           </select>
