@@ -4,6 +4,7 @@ import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { RecipeSteps } from '../components/RecipeSteps'
 import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
+import { TagFilter } from '../components/TagFilter'
 import type { Recipe, File, RecipeStep } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 
@@ -17,17 +18,18 @@ type Props = {
 
 type RecipeWithFiles = Recipe & { files: File[] }
 
-function getParams(): { tag: string; recipe: string } {
+function getParams(): { tags: string[]; recipe: string } {
   const params = new URLSearchParams(window.location.search)
+  const tagParam = params.get('tags') ?? ''
   return {
-    tag: params.get('tag') ?? '',
+    tags: tagParam ? tagParam.split(',') : [],
     recipe: params.get('recipe') ?? '',
   }
 }
 
-function setParams(tag: string, recipe: string) {
+function setParams(tags: string[], recipe: string) {
   const params = new URLSearchParams()
-  if (tag !== '') params.set('tag', tag)
+  if (tags.length > 0) params.set('tags', tags.join(','))
   if (recipe !== '') params.set('recipe', recipe)
   const search = params.toString()
   const url = search === '' ? '/browse' : `/browse?${search}`
@@ -40,7 +42,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(initialParams.recipe)
-  const [tagFilter, setTagFilter] = useState(initialParams.tag)
+  const [tagFilter, setTagFilter] = useState<string[]>(initialParams.tags)
   const [deleting, setDeleting] = useState(false)
   const [steps, setSteps] = useState<RecipeStep[]>([])
   const [loadingSteps, setLoadingSteps] = useState(false)
@@ -103,20 +105,16 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
     }
   }
 
-  const filteredRecipes = tagFilter === ''
+  const filteredRecipes = tagFilter.length === 0
     ? recipes
     : recipes.filter((r) =>
-        r.tag_string.toLowerCase().includes(tagFilter.toLowerCase())
+        tagFilter.every((tag) => r.tag_string.toLowerCase().includes(tag.toLowerCase()))
       )
 
   const selectedRecipe = recipes.find((r) => r.uuid === selectedRecipeId) ?? null
 
   const handleSelectRecipe = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedRecipeId(event.target.value)
-  }
-
-  const handleTagChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setTagFilter(event.target.value)
   }
 
   const handleDelete = () => {
@@ -146,14 +144,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
         {error !== null && <p className="error">{error}</p>}
 
         <div className="flex-row" style={{ marginBottom: '1rem' }}>
-          <input
-            type="text"
-            placeholder="Filter by tag"
-            className="input"
-            style={{ marginBottom: 0 }}
-            value={tagFilter}
-            onChange={handleTagChange}
-          />
+          <TagFilter value={tagFilter} onChange={setTagFilter} />
         </div>
 
         {loading ? (

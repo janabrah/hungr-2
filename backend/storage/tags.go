@@ -18,6 +18,9 @@ const (
 	queryInsertRecipeTag = `
 		INSERT INTO recipe_tags (recipe_uuid, tag_uuid) VALUES ($1, $2)
 		ON CONFLICT DO NOTHING`
+
+	queryGetAllTags = `
+		SELECT uuid, name FROM tags ORDER BY name`
 )
 
 func UpsertTag(tagUUID uuid.UUID, name string) (*models.Tag, error) {
@@ -37,4 +40,22 @@ func InsertRecipeTag(recipeUUID, tagUUID uuid.UUID) error {
 func CreateTagUUID(tag string) uuid.UUID {
 	namespace := uuid.Must(uuid.FromString(tagNamespace))
 	return uuid.NewV5(namespace, tag)
+}
+
+func GetAllTags() ([]models.Tag, error) {
+	rows, err := db.Query(context.Background(), queryGetAllTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []models.Tag
+	for rows.Next() {
+		var t models.Tag
+		if err := rows.Scan(&t.UUID, &t.Name); err != nil {
+			return nil, err
+		}
+		tags = append(tags, t)
+	}
+	return tags, rows.Err()
 }

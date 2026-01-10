@@ -44,3 +44,7 @@ type UploadResponse struct {
 	Recipe  Recipe `json:"recipe"`
 	Tags    []Tag  `json:"tags"`
 }
+
+type TagsResponse struct {
+	Tags []Tag `json:"tags"`
+}

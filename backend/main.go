@@ -33,6 +33,7 @@ func main() {
 	http.HandleFunc("/api/extract-recipe", middleware.RequestLogger(middleware.CORS(handleExtractRecipe, "POST, OPTIONS")))
 	http.HandleFunc("/api/extract-recipe-image", middleware.RequestLogger(middleware.CORS(handleExtractRecipeImage, "POST, OPTIONS")))
 	http.HandleFunc("/api/extract-recipe-text", middleware.RequestLogger(middleware.CORS(handleExtractRecipeText, "POST, OPTIONS")))
+	http.HandleFunc("/api/tags", middleware.RequestLogger(middleware.CORS(handleTags, "GET, OPTIONS")))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -125,6 +126,14 @@ func handleExtractRecipeImage(w http.ResponseWriter, r *http.Request) {
 func handleExtractRecipeText(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		handlers.ExtractRecipeFromText(w, r)
+	} else {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleTags(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		handlers.GetTags(w, r)
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

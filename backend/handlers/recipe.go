@@ -210,6 +210,28 @@ func respondWithError(w http.ResponseWriter, code int, message string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
+func GetTags(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	tags, err := storage.GetAllTags()
+	if err != nil {
+		logger.Error(ctx, "failed to get tags", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to load tags")
+		return
+	}
+
+	if tags == nil {
+		tags = []models.Tag{}
+	}
+
+	response := models.TagsResponse{
+		Tags: tags,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func GetRecipeSteps(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
