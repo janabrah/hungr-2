@@ -165,8 +165,9 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
     setSubmitting(true)
     setError(null)
     try {
-      const emptyFileList = new DataTransfer().files
-      const response = await createRecipe(email, newRecipeName, newRecipeTags, emptyFileList)
+      // Include images when saving from image import mode
+      const filesToUpload = inputMode === 'image' ? imageFiles : []
+      const response = await createRecipe(email, newRecipeName, newRecipeTags, filesToUpload)
       await updateRecipeSteps(asUUID(response.recipe.uuid), steps)
       setSuccess(true)
       setSteps(null)

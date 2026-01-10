@@ -30,7 +30,7 @@ export async function createRecipe(
   email: Email,
   name: string,
   tagString: string,
-  files: FileList
+  files: FileList | File[]
 ): Promise<UploadResponse> {
   const formData = new FormData()
   for (const file of files) {
