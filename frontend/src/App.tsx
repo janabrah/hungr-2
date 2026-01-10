@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react'
 import { Home } from './pages/Home'
-import { Upload } from './pages/Upload'
+import { AddRecipe } from './pages/AddRecipe'
 import { Browse } from './pages/Browse'
-import { Import } from './pages/Import'
 import { Login } from './pages/Login'
 import { getEmail } from './auth'
 import type { Email } from './branded'
 
-type Page = 'home' | 'upload' | 'browse' | 'import'
+type Page = 'home' | 'add' | 'browse'
 
 function getPageFromPath(): Page {
   const path = window.location.pathname
-  if (path === '/upload') return 'upload'
+  if (path === '/add') return 'add'
   if (path === '/browse') return 'browse'
-  if (path === '/import') return 'import'
+  // Support old routes for backwards compatibility
+  if (path === '/upload' || path === '/import') return 'add'
   return 'home'
 }
 
@@ -46,12 +46,10 @@ function App() {
   switch (page) {
     case 'home':
       return <Home onNavigate={navigate} email={email} currentPage={page} />
-    case 'upload':
-      return <Upload email={email} currentPage={page} onNavigate={navigate} />
+    case 'add':
+      return <AddRecipe email={email} currentPage={page} onNavigate={navigate} />
     case 'browse':
       return <Browse email={email} currentPage={page} onNavigate={navigate} />
-    case 'import':
-      return <Import email={email} currentPage={page} onNavigate={navigate} />
   }
 }
 

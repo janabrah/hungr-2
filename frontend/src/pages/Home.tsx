@@ -2,7 +2,7 @@ import { clearEmail } from '../auth'
 import { Header } from '../components/Header'
 import type { Email } from '../branded'
 
-type Page = 'home' | 'upload' | 'browse' | 'import'
+type Page = 'home' | 'add' | 'browse'
 
 type Props = {
   onNavigate: (page: Page) => void
@@ -21,12 +21,22 @@ export function Home({ onNavigate, email, currentPage }: Props) {
       <Header email={email} currentPage={currentPage} onNavigate={onNavigate} />
       <div className="center" style={{ minHeight: 'calc(100vh - 60px)' }}>
         <h1>Welcome to Hungr!</h1>
-        <p>Would you like to upload a recipe or browse recipes?</p>
+        <p>What would you like to do?</p>
         <div className="flex-row">
-          <button className="btn" onClick={() => { onNavigate('upload') }}>
-            Upload Recipe
+          <button
+            className="btn"
+            onClick={() => {
+              onNavigate('add')
+            }}
+          >
+            Add Recipe
           </button>
-          <button className="btn" onClick={() => { onNavigate('browse') }}>
+          <button
+            className="btn"
+            onClick={() => {
+              onNavigate('browse')
+            }}
+          >
             Browse Recipes
           </button>
         </div>
