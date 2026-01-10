@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getRecipes, getFileURL, deleteRecipe, getRecipeSteps, updateRecipeSteps } from '../api'
+import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import { RecipeSteps } from '../components/RecipeSteps'
 import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
@@ -174,21 +175,21 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
           <div style={{ marginTop: '2rem' }}>
             <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
               <h2 style={{ margin: 0 }}>{selectedRecipe.name}</h2>
-              <button
-                className="btn btn-danger"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
+              <Button variant="danger" onClick={handleDelete} disabled={deleting}>
                 {deleting ? 'Deleting...' : 'Delete'}
-              </button>
+              </Button>
             </div>
             <p>Tags: {selectedRecipe.tag_string}</p>
             <div className="flex-row" style={{ alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
               <h3 style={{ margin: 0 }}>Steps</h3>
               {!editingSteps && !loadingSteps && (
-                <button className="btn" onClick={() => setEditingSteps(true)}>
+                <Button
+                  onClick={() => {
+                    setEditingSteps(true)
+                  }}
+                >
                   Edit
-                </button>
+                </Button>
               )}
             </div>
             {loadingSteps ? (

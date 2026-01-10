@@ -21,16 +21,54 @@ type ExtractRequest struct {
 	URL string `json:"url"`
 }
 
-const extractImageSystemPrompt = `You are a recipe extraction assistant. Given an image of a recipe (such as a photo from a cookbook, a handwritten recipe card, or a screenshot), extract the recipe steps and ingredients into a structured JSON format.
-
-Rules:
+// Shared extraction rules used by all prompts
+const extractionRules = `Rules:
 1. ALWAYS start with a step that has an empty instruction "" containing ALL ingredients from the recipe. This must be the first element in the steps array.
 2. Then add additional steps for the actual cooking instructions (these steps should have empty ingredients arrays since all ingredients are in the first step).
 3. Format ingredients as "quantity unit ingredient" (e.g., "2 cups flour", "1 tsp salt", "3 eggs")
 4. Use standard cooking units: tsp, tbsp, cup, oz, lb, g, kg, ml, l
 5. For countable items without units, just use the number and name (e.g., "2 eggs", "1 onion")
-6. Do NOT include temperatures (e.g., "350°F", "180°C") - these are not ingredients
+6. Do NOT include temperatures (e.g., "350°F", "180°C") - these are not ingredients`
+
+const extractImageSystemPrompt = `You are a recipe extraction assistant. Given an image of a recipe (such as a photo from a cookbook, a handwritten recipe card, or a screenshot), extract the recipe steps and ingredients into a structured JSON format.
+
+` + extractionRules + `
 7. If the image is unclear or partially visible, extract what you can see`
+
+const extractURLSystemPrompt = `You are a recipe extraction assistant. Given the text content of a recipe webpage, extract the recipe steps and ingredients into a structured JSON format.
+
+` + extractionRules
+
+// Shared JSON schema for recipe steps response
+var recipeStepsSchema = map[string]interface{}{
+	"type": "object",
+	"properties": map[string]interface{}{
+		"steps": map[string]interface{}{
+			"type": "array",
+			"items": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"instruction": map[string]interface{}{
+						"type":        "string",
+						"description": "The step instruction. Empty string if this is just an ingredients list.",
+					},
+					"ingredients": map[string]interface{}{
+						"type": "array",
+						"items": map[string]interface{}{
+							"type":        "string",
+							"description": "Ingredient in format 'quantity unit name' (e.g., '2 cups flour', '1 tsp salt', '3 eggs')",
+						},
+						"description": "Ingredients used in this step",
+					},
+				},
+				"required":             []string{"instruction", "ingredients"},
+				"additionalProperties": false,
+			},
+		},
+	},
+	"required":             []string{"steps"},
+	"additionalProperties": false,
+}
 
 type openAIRequest struct {
 	Model          string           `json:"model"`
@@ -75,15 +113,66 @@ type openAIResponse struct {
 	} `json:"error"`
 }
 
-const extractSystemPrompt = `You are a recipe extraction assistant. Given the text content of a recipe webpage, extract the recipe steps and ingredients into a structured JSON format.
+// callOpenAI makes a request to OpenAI's chat completions API and parses the recipe response
+func callOpenAI(apiKey, model string, messages []openAIMessage, timeout time.Duration) (*models.RecipeStepsResponse, error) {
+	reqBody := openAIRequest{
+		Model:    model,
+		Messages: messages,
+		ResponseFormat: &responseFormat{
+			Type: "json_schema",
+			JSONSchema: &jsonSchema{
+				Name:   "recipe_steps",
+				Strict: true,
+				Schema: recipeStepsSchema,
+			},
+		},
+	}
 
-Rules:
-1. ALWAYS start with a step that has an empty instruction "" containing ALL ingredients from the recipe. This must be the first element in the steps array.
-2. Then add additional steps for the actual cooking instructions (these steps should have empty ingredients arrays since all ingredients are in the first step).
-3. Format ingredients as "quantity unit ingredient" (e.g., "2 cups flour", "1 tsp salt", "3 eggs")
-4. Use standard cooking units: tsp, tbsp, cup, oz, lb, g, kg, ml, l
-5. For countable items without units, just use the number and name (e.g., "2 eggs", "1 onion")
-6. Do NOT include temperatures (e.g., "350°F", "180°C") - these are not ingredients`
+	jsonBody, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var openAIResp openAIResponse
+	if err := json.Unmarshal(body, &openAIResp); err != nil {
+		return nil, fmt.Errorf("failed to parse OpenAI response: %v", err)
+	}
+
+	if openAIResp.Error != nil {
+		return nil, fmt.Errorf("OpenAI API error: %s", openAIResp.Error.Message)
+	}
+
+	if len(openAIResp.Choices) == 0 {
+		return nil, fmt.Errorf("no response from OpenAI")
+	}
+
+	var result models.RecipeStepsResponse
+	if err := json.Unmarshal([]byte(openAIResp.Choices[0].Message.Content), &result); err != nil {
+		return nil, fmt.Errorf("failed to parse recipe JSON: %v", err)
+	}
+
+	return &result, nil
+}
 
 func ExtractRecipe(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -223,37 +312,7 @@ func ExtractRecipeFromImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func extractRecipeFromImageWithOpenAI(apiKey, model string, imageDataURLs []string) (*models.RecipeStepsResponse, error) {
-	schema := map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"steps": map[string]interface{}{
-				"type": "array",
-				"items": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"instruction": map[string]interface{}{
-							"type":        "string",
-							"description": "The step instruction. Empty string if this is just an ingredients list.",
-						},
-						"ingredients": map[string]interface{}{
-							"type": "array",
-							"items": map[string]interface{}{
-								"type":        "string",
-								"description": "Ingredient in format 'quantity unit name' (e.g., '2 cups flour', '1 tsp salt', '3 eggs')",
-							},
-							"description": "Ingredients used in this step",
-						},
-					},
-					"required":             []string{"instruction", "ingredients"},
-					"additionalProperties": false,
-				},
-			},
-		},
-		"required":             []string{"steps"},
-		"additionalProperties": false,
-	}
-
-	// Vision API uses array content format - start with text prompt
+	// Build user message with text prompt and images
 	promptText := "Extract the recipe from these images. Include all ingredients and cooking steps you can see."
 	if len(imageDataURLs) == 1 {
 		promptText = "Extract the recipe from this image. Include all ingredients and cooking steps you can see."
@@ -262,73 +321,16 @@ func extractRecipeFromImageWithOpenAI(apiKey, model string, imageDataURLs []stri
 	userContent := []contentPart{
 		{Type: "text", Text: promptText},
 	}
-	// Add all images
 	for _, dataURL := range imageDataURLs {
 		userContent = append(userContent, contentPart{Type: "image_url", ImageURL: &imageURL{URL: dataURL}})
 	}
 
-	reqBody := openAIRequest{
-		Model: model,
-		Messages: []openAIMessage{
-			{Role: "system", Content: extractImageSystemPrompt},
-			{Role: "user", Content: userContent},
-		},
-		ResponseFormat: &responseFormat{
-			Type: "json_schema",
-			JSONSchema: &jsonSchema{
-				Name:   "recipe_steps",
-				Strict: true,
-				Schema: schema,
-			},
-		},
+	messages := []openAIMessage{
+		{Role: "system", Content: extractImageSystemPrompt},
+		{Role: "user", Content: userContent},
 	}
 
-	jsonBody, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{Timeout: 90 * time.Second} // Longer timeout for image processing
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var openAIResp openAIResponse
-	if err := json.Unmarshal(body, &openAIResp); err != nil {
-		return nil, fmt.Errorf("failed to parse OpenAI response: %v", err)
-	}
-
-	if openAIResp.Error != nil {
-		return nil, fmt.Errorf("OpenAI API error: %s", openAIResp.Error.Message)
-	}
-
-	if len(openAIResp.Choices) == 0 {
-		return nil, fmt.Errorf("no response from OpenAI")
-	}
-
-	responseContent := openAIResp.Choices[0].Message.Content
-
-	var result models.RecipeStepsResponse
-	if err := json.Unmarshal([]byte(responseContent), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse recipe JSON: %v", err)
-	}
-
-	return &result, nil
+	return callOpenAI(apiKey, model, messages, 90*time.Second)
 }
 
 func fetchAndExtractText(url string) (string, error) {
@@ -375,98 +377,12 @@ func extractText(n *html.Node, sb *strings.Builder) {
 }
 
 func extractRecipeWithOpenAI(apiKey, model, content string) (*models.RecipeStepsResponse, error) {
-	schema := map[string]interface{}{
-		"type": "object",
-		"properties": map[string]interface{}{
-			"steps": map[string]interface{}{
-				"type": "array",
-				"items": map[string]interface{}{
-					"type": "object",
-					"properties": map[string]interface{}{
-						"instruction": map[string]interface{}{
-							"type":        "string",
-							"description": "The step instruction. Empty string if this is just an ingredients list.",
-						},
-						"ingredients": map[string]interface{}{
-							"type": "array",
-							"items": map[string]interface{}{
-								"type":        "string",
-								"description": "Ingredient in format 'quantity unit name' (e.g., '2 cups flour', '1 tsp salt', '3 eggs')",
-							},
-							"description": "Ingredients used in this step",
-						},
-					},
-					"required":             []string{"instruction", "ingredients"},
-					"additionalProperties": false,
-				},
-			},
-		},
-		"required":             []string{"steps"},
-		"additionalProperties": false,
+	messages := []openAIMessage{
+		{Role: "system", Content: extractURLSystemPrompt},
+		{Role: "user", Content: fmt.Sprintf("Extract the recipe from this webpage content:\n\n%s", content)},
 	}
 
-	reqBody := openAIRequest{
-		Model: model,
-		Messages: []openAIMessage{
-			{Role: "system", Content: extractSystemPrompt},
-			{Role: "user", Content: fmt.Sprintf("Extract the recipe from this webpage content:\n\n%s", content)},
-		},
-		ResponseFormat: &responseFormat{
-			Type: "json_schema",
-			JSONSchema: &jsonSchema{
-				Name:   "recipe_steps",
-				Strict: true,
-				Schema: schema,
-			},
-		},
-	}
-
-	jsonBody, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonBody))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{Timeout: 60 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var openAIResp openAIResponse
-	if err := json.Unmarshal(body, &openAIResp); err != nil {
-		return nil, fmt.Errorf("failed to parse OpenAI response: %v", err)
-	}
-
-	if openAIResp.Error != nil {
-		return nil, fmt.Errorf("OpenAI API error: %s", openAIResp.Error.Message)
-	}
-
-	if len(openAIResp.Choices) == 0 {
-		return nil, fmt.Errorf("no response from OpenAI")
-	}
-
-	responseContent := openAIResp.Choices[0].Message.Content
-
-	var result models.RecipeStepsResponse
-	if err := json.Unmarshal([]byte(responseContent), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse recipe JSON: %v", err)
-	}
-
-	return &result, nil
+	return callOpenAI(apiKey, model, messages, 60*time.Second)
 }
 
 func loadEnvFile(filename string) {

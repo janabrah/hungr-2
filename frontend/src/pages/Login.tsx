@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { setEmail } from '../auth'
 import { login } from '../api'
+import { Button } from '../components/Button'
 import { asEmail } from '../branded'
 
 type Props = {
@@ -53,9 +54,9 @@ export function Login({ onLogin }: Props) {
             autoFocus
           />
           {error !== null && <p className="error">{error}</p>}
-          <button type="submit" className="btn" style={{ width: '100%' }} disabled={loading}>
+          <Button type="submit" style={{ width: '100%' }} disabled={loading}>
             {loading ? 'Logging in...' : 'Continue'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>

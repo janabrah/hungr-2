@@ -1,4 +1,5 @@
 import { clearEmail } from '../auth'
+import { Button } from '../components/Button'
 import { Header } from '../components/Header'
 import type { Email } from '../branded'
 
@@ -23,30 +24,24 @@ export function Home({ onNavigate, email, currentPage }: Props) {
         <h1>Welcome to Hungr!</h1>
         <p>What would you like to do?</p>
         <div className="flex-row">
-          <button
-            className="btn"
+          <Button
             onClick={() => {
               onNavigate('add')
             }}
           >
             Add Recipe
-          </button>
-          <button
-            className="btn"
+          </Button>
+          <Button
             onClick={() => {
               onNavigate('browse')
             }}
           >
             Browse Recipes
-          </button>
+          </Button>
         </div>
-        <button
-          className="btn"
-          style={{ marginTop: '2rem', opacity: 0.7 }}
-          onClick={handleLogout}
-        >
+        <Button style={{ marginTop: '2rem', opacity: 0.7 }} onClick={handleLogout}>
           Logout
-        </button>
+        </Button>
       </div>
     </>
   )

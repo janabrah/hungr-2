@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button, IconButton } from './Button'
 import type { RecipeStep } from '../types.gen'
 
 type Props = {
@@ -59,14 +60,14 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
         <div key={index} className="recipe-step-edit">
           <div className="recipe-step-edit-header">
             <span className="recipe-step-number">Step {index + 1}</span>
-            <button
-              type="button"
-              className="btn-icon"
-              onClick={() => removeStep(index)}
+            <IconButton
+              onClick={() => {
+                removeStep(index)
+              }}
               disabled={saving}
             >
               Remove
-            </button>
+            </IconButton>
           </div>
           <textarea
             className="input recipe-step-instruction-input"
@@ -88,16 +89,16 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
         </div>
       ))}
       <div className="recipe-steps-editor-actions">
-        <button type="button" className="btn" onClick={addStep} disabled={saving}>
+        <Button onClick={addStep} disabled={saving}>
           Add Step
-        </button>
+        </Button>
         <div className="flex-row">
-          <button type="button" className="btn" onClick={onCancel} disabled={saving}>
+          <Button onClick={onCancel} disabled={saving}>
             Cancel
-          </button>
-          <button type="button" className="btn" onClick={handleSave} disabled={saving}>
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

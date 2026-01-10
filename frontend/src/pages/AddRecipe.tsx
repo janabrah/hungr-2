@@ -6,6 +6,7 @@ import {
   updateRecipeSteps,
   createRecipe,
 } from '../api'
+import { Button, CloseButton } from '../components/Button'
 import { Header } from '../components/Header'
 import { RecipeSteps } from '../components/RecipeSteps'
 import type { RecipeStep, Recipe } from '../types.gen'
@@ -198,9 +199,8 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
         {success && <p className="success">Recipe saved successfully!</p>}
 
         <div style={{ marginBottom: '1.5rem' }}>
-          <button
-            type="button"
-            className={`btn ${inputMode === 'upload' ? '' : 'btn-secondary'}`}
+          <Button
+            variant={inputMode === 'upload' ? 'primary' : 'secondary'}
             onClick={() => {
               setInputMode('upload')
               resetState()
@@ -208,10 +208,9 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
             style={{ marginRight: '0.5rem' }}
           >
             Upload Images
-          </button>
-          <button
-            type="button"
-            className={`btn ${inputMode === 'url' ? '' : 'btn-secondary'}`}
+          </Button>
+          <Button
+            variant={inputMode === 'url' ? 'primary' : 'secondary'}
             onClick={() => {
               setInputMode('url')
               resetState()
@@ -219,17 +218,16 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
             style={{ marginRight: '0.5rem' }}
           >
             Import from URL
-          </button>
-          <button
-            type="button"
-            className={`btn ${inputMode === 'image' ? '' : 'btn-secondary'}`}
+          </Button>
+          <Button
+            variant={inputMode === 'image' ? 'primary' : 'secondary'}
             onClick={() => {
               setInputMode('image')
               resetState()
             }}
           >
             Import from Image
-          </button>
+          </Button>
         </div>
 
         {inputMode === 'upload' && (
@@ -267,9 +265,9 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                 setUploadTags(e.target.value)
               }}
             />
-            <button type="submit" className="btn" disabled={submitting}>
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Uploading...' : 'Upload Recipe'}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -288,11 +286,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                 setUrl(e.target.value)
               }}
             />
-            <button
-              type="submit"
-              className="btn"
-              disabled={submitting || url === ''}
-            >
+            <Button type="submit" disabled={submitting || url === ''}>
               {submitting ? (
                 <>
                   <span className="spinner" />
@@ -301,7 +295,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
               ) : (
                 'Extract Recipe'
               )}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -336,46 +330,20 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                           borderRadius: '0.25rem',
                         }}
                       />
-                      <button
-                        type="button"
+                      <CloseButton
                         onClick={() => {
                           removeImage(index)
                         }}
-                        style={{
-                          position: 'absolute',
-                          top: '0.25rem',
-                          right: '0.25rem',
-                          background: 'rgba(0,0,0,0.6)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '24px',
-                          height: '24px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          lineHeight: '1',
-                        }}
-                      >
-                        ×
-                      </button>
+                      />
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={clearAllImages}
-                  style={{ marginTop: '0.5rem' }}
-                  className="btn btn-secondary"
-                >
+                <Button variant="secondary" onClick={clearAllImages} style={{ marginTop: '0.5rem' }}>
                   Clear All
-                </button>
+                </Button>
               </div>
             )}
-            <button
-              type="submit"
-              className="btn"
-              disabled={submitting || imageFiles.length === 0}
-            >
+            <Button type="submit" disabled={submitting || imageFiles.length === 0}>
               {submitting ? (
                 <>
                   <span className="spinner" />
@@ -384,7 +352,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
               ) : (
                 'Extract Recipe'
               )}
-            </button>
+            </Button>
           </form>
         )}
 
@@ -408,8 +376,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                   </option>
                 ))}
               </select>
-              <button
-                className="btn"
+              <Button
                 onClick={() => {
                   void handleSaveToExisting()
                 }}
@@ -417,7 +384,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                 style={{ marginTop: '0.5rem' }}
               >
                 {submitting ? 'Saving...' : 'Save to Recipe'}
-              </button>
+              </Button>
             </div>
 
             <div
@@ -442,15 +409,14 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                   setNewRecipeTags(e.target.value)
                 }}
               />
-              <button
-                className="btn"
+              <Button
                 onClick={() => {
                   void handleSaveAsNew()
                 }}
                 disabled={submitting || newRecipeName === ''}
               >
                 {submitting ? 'Creating...' : 'Create New Recipe'}
-              </button>
+              </Button>
             </div>
 
             <h2>Extracted Steps</h2>
