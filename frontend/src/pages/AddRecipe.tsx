@@ -14,7 +14,7 @@ import type { RecipeStep, Recipe } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 
 type Page = 'home' | 'add' | 'browse'
-type InputMode = 'upload' | 'url' | 'image' | 'text'
+type InputMode = 'url' | 'image' | 'text'
 
 type Props = {
   email: Email
@@ -23,13 +23,7 @@ type Props = {
 }
 
 export function AddRecipe({ email, currentPage, onNavigate }: Props) {
-  const [inputMode, setInputMode] = useState<InputMode>('upload')
-
-  // Upload mode state
-  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null)
-  const [uploadName, setUploadName] = useState('')
-  const [uploadTags, setUploadTags] = useState('')
-  const uploadFileInputRef = useRef<HTMLInputElement>(null)
+  const [inputMode, setInputMode] = useState<InputMode>('image')
 
   // Import mode state
   const [url, setUrl] = useState('')
@@ -57,32 +51,6 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
         // Ignore - recipes list is optional
       })
   }, [email])
-
-  // Upload handlers
-  const handleUploadSubmit = (event: React.FormEvent) => {
-    event.preventDefault()
-    if (submitting || uploadFiles === null || uploadFiles.length === 0) return
-
-    setSubmitting(true)
-    setError(null)
-
-    createRecipe(email, uploadName, uploadTags, uploadFiles)
-      .then(() => {
-        setSuccess(true)
-        setUploadName('')
-        setUploadTags('')
-        setUploadFiles(null)
-        if (uploadFileInputRef.current !== null) {
-          uploadFileInputRef.current.value = ''
-        }
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Upload failed')
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
 
   // Import handlers
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,7 +147,9 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       // Include images when saving from image import mode
       const filesToUpload = inputMode === 'image' ? imageFiles : []
       const response = await createRecipe(email, newRecipeName, newRecipeTags, filesToUpload)
-      await updateRecipeSteps(asUUID(response.recipe.uuid), steps)
+      if (steps.length > 0) {
+        await updateRecipeSteps(asUUID(response.recipe.uuid), steps)
+      }
       setSuccess(true)
       setSteps(null)
       setUrl('')
@@ -211,14 +181,14 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
 
         <div style={{ marginBottom: '1.5rem' }}>
           <Button
-            variant={inputMode === 'upload' ? 'primary' : 'secondary'}
+            variant={inputMode === 'image' ? 'primary' : 'secondary'}
             onClick={() => {
-              setInputMode('upload')
+              setInputMode('image')
               resetState()
             }}
             style={{ marginRight: '0.5rem' }}
           >
-            Upload Images
+            From Image
           </Button>
           <Button
             variant={inputMode === 'url' ? 'primary' : 'secondary'}
@@ -228,17 +198,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
             }}
             style={{ marginRight: '0.5rem' }}
           >
-            Import from URL
-          </Button>
-          <Button
-            variant={inputMode === 'image' ? 'primary' : 'secondary'}
-            onClick={() => {
-              setInputMode('image')
-              resetState()
-            }}
-            style={{ marginRight: '0.5rem' }}
-          >
-            Import from Image
+            From URL
           </Button>
           <Button
             variant={inputMode === 'text' ? 'primary' : 'secondary'}
@@ -250,47 +210,6 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
             Paste Text
           </Button>
         </div>
-
-        {inputMode === 'upload' && (
-          <form onSubmit={handleUploadSubmit}>
-            <p style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '1rem' }}>
-              Upload photos of your recipe (e.g., from a cookbook or handwritten notes)
-            </p>
-            <input
-              ref={uploadFileInputRef}
-              type="file"
-              multiple
-              required
-              accept="image/*"
-              className="input"
-              onChange={(e) => {
-                setUploadFiles(e.target.files)
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Recipe name"
-              required
-              className="input"
-              value={uploadName}
-              onChange={(e) => {
-                setUploadName(e.target.value)
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Tags (comma separated)"
-              className="input"
-              value={uploadTags}
-              onChange={(e) => {
-                setUploadTags(e.target.value)
-              }}
-            />
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Uploading...' : 'Upload Recipe'}
-            </Button>
-          </form>
-        )}
 
         {inputMode === 'url' && (
           <form onSubmit={handleExtract}>
@@ -364,16 +283,28 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                 </Button>
               </div>
             )}
-            <Button type="submit" disabled={submitting || imageFiles.length === 0}>
-              {submitting ? (
-                <>
-                  <span className="spinner" />
-                  Extracting recipe...
-                </>
-              ) : (
-                'Extract Recipe'
-              )}
-            </Button>
+            <div className="flex-row" style={{ gap: '0.5rem' }}>
+              <Button type="submit" disabled={submitting || imageFiles.length === 0}>
+                {submitting ? (
+                  <>
+                    <span className="spinner" />
+                    Extracting recipe...
+                  </>
+                ) : (
+                  'Extract Recipe'
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={submitting || imageFiles.length === 0}
+                onClick={() => {
+                  setSteps([])
+                }}
+              >
+                Skip Extraction
+              </Button>
+            </div>
           </form>
         )}
 
@@ -406,39 +337,41 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
 
         {steps !== null && (
           <div style={{ marginTop: '2rem' }}>
-            <div
-              style={{ marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #ccc' }}
-            >
-              <h3>Save to Existing Recipe</h3>
-              <select
-                className="select"
-                value={selectedRecipeId}
-                onChange={(e) => {
-                  setSelectedRecipeId(e.target.value)
-                }}
+            {steps.length > 0 && (
+              <div
+                style={{ marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #ccc' }}
               >
-                <option value="">Select a recipe</option>
-                {recipes.map((recipe) => (
-                  <option key={recipe.uuid} value={recipe.uuid}>
-                    {recipe.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                onClick={() => {
-                  void handleSaveToExisting()
-                }}
-                disabled={submitting || selectedRecipeId === ''}
-                style={{ marginTop: '0.5rem' }}
-              >
-                {submitting ? 'Saving...' : 'Save to Recipe'}
-              </Button>
-            </div>
+                <h3>Save to Existing Recipe</h3>
+                <select
+                  className="select"
+                  value={selectedRecipeId}
+                  onChange={(e) => {
+                    setSelectedRecipeId(e.target.value)
+                  }}
+                >
+                  <option value="">Select a recipe</option>
+                  {recipes.map((recipe) => (
+                    <option key={recipe.uuid} value={recipe.uuid}>
+                      {recipe.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  onClick={() => {
+                    void handleSaveToExisting()
+                  }}
+                  disabled={submitting || selectedRecipeId === ''}
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  {submitting ? 'Saving...' : 'Save to Recipe'}
+                </Button>
+              </div>
+            )}
 
             <div
               style={{ marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #ccc' }}
             >
-              <h3>Or Create New Recipe</h3>
+              <h3>{steps.length > 0 ? 'Or Create New Recipe' : 'Create New Recipe'}</h3>
               <input
                 type="text"
                 placeholder="Recipe name"
@@ -467,8 +400,12 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
               </Button>
             </div>
 
-            <h2>Extracted Steps</h2>
-            <RecipeSteps steps={steps} />
+            {steps.length > 0 && (
+              <>
+                <h2>Extracted Steps</h2>
+                <RecipeSteps steps={steps} />
+              </>
+            )}
           </div>
         )}
       </div>
