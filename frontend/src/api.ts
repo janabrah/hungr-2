@@ -113,3 +113,16 @@ export async function extractRecipeFromImages(files: File[]): Promise<RecipeStep
   }
   return response.json() as Promise<RecipeStepsResponse>
 }
+
+export async function extractRecipeFromText(text: string): Promise<RecipeStepsResponse> {
+  const response = await fetch(`${API_BASE}/api/extract-recipe-text`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string }
+    throw new Error(data.error ?? `Failed to extract recipe from text: ${response.status.toString()}`)
+  }
+  return response.json() as Promise<RecipeStepsResponse>
+}

@@ -28,16 +28,23 @@ const extractionRules = `Rules:
 3. Format ingredients as "quantity unit ingredient" (e.g., "2 cups flour", "1 tsp salt", "3 eggs")
 4. Use standard cooking units: tsp, tbsp, cup, oz, lb, g, kg, ml, l
 5. For countable items without units, just use the number and name (e.g., "2 eggs", "1 onion")
-6. Do NOT include temperatures (e.g., "350°F", "180°C") - these are not ingredients`
+6. Do NOT include temperatures (e.g., "350°F", "180°C") in the ingredients list - temperatures belong in the instruction steps only
+7. IMPORTANT: Preserve ALL numbers in instructions including oven temperatures (e.g., "Preheat oven to 350°F"), cooking times (e.g., "bake for 25 minutes"), and quantities. Never omit or round these values.`
 
 const extractImageSystemPrompt = `You are a recipe extraction assistant. Given an image of a recipe (such as a photo from a cookbook, a handwritten recipe card, or a screenshot), extract the recipe steps and ingredients into a structured JSON format.
 
 ` + extractionRules + `
-7. If the image is unclear or partially visible, extract what you can see`
+8. If the image is unclear or partially visible, extract what you can see`
 
 const extractURLSystemPrompt = `You are a recipe extraction assistant. Given the text content of a recipe webpage, extract the recipe steps and ingredients into a structured JSON format.
 
 ` + extractionRules
+
+const extractTextSystemPrompt = `You are a recipe extraction assistant. Given raw text that has been copied and pasted from a recipe website (which may be poorly formatted, contain ads, navigation text, or other noise), extract the recipe steps and ingredients into a structured JSON format.
+
+` + extractionRules + `
+8. Ignore any non-recipe content like ads, navigation, comments, ratings, or author bios
+9. If the text contains multiple recipes, extract only the main/first recipe`
 
 // Shared JSON schema for recipe steps response
 var recipeStepsSchema = map[string]interface{}{
@@ -380,6 +387,70 @@ func extractRecipeWithOpenAI(apiKey, model, content string) (*models.RecipeSteps
 	messages := []openAIMessage{
 		{Role: "system", Content: extractURLSystemPrompt},
 		{Role: "user", Content: fmt.Sprintf("Extract the recipe from this webpage content:\n\n%s", content)},
+	}
+
+	return callOpenAI(apiKey, model, messages, 60*time.Second)
+}
+
+type ExtractTextRequest struct {
+	Text string `json:"text"`
+}
+
+func ExtractRecipeFromText(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if r.Method != "POST" {
+		respondWithError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	var req ExtractTextRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Text == "" {
+		respondWithError(w, http.StatusBadRequest, "text is required")
+		return
+	}
+
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		logger.Error(ctx, "OPENAI_API_KEY not set", fmt.Errorf("missing env var"))
+		respondWithError(w, http.StatusInternalServerError, "recipe extraction not configured")
+		return
+	}
+
+	model := os.Getenv("OPENAI_MODEL")
+	if model == "" {
+		model = "gpt-5.2"
+	}
+
+	// Truncate if too long
+	text := req.Text
+	if len(text) > 15000 {
+		text = text[:15000]
+	}
+	logger.Info(ctx, "extracting recipe from text", "length", len(text), "model", model)
+
+	// Extract recipe using OpenAI
+	result, err := extractRecipeFromTextWithOpenAI(apiKey, model, text)
+	if err != nil {
+		logger.Error(ctx, "failed to extract recipe from text", err)
+		respondWithError(w, http.StatusInternalServerError, "failed to extract recipe: "+err.Error())
+		return
+	}
+	logger.Info(ctx, "OpenAI text extraction complete", "steps", len(result.Steps))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(result)
+}
+
+func extractRecipeFromTextWithOpenAI(apiKey, model, text string) (*models.RecipeStepsResponse, error) {
+	messages := []openAIMessage{
+		{Role: "system", Content: extractTextSystemPrompt},
+		{Role: "user", Content: fmt.Sprintf("Extract the recipe from this text:\n\n%s", text)},
 	}
 
 	return callOpenAI(apiKey, model, messages, 60*time.Second)

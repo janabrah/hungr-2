@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
   extractRecipeFromURL,
   extractRecipeFromImages,
+  extractRecipeFromText,
   getRecipes,
   updateRecipeSteps,
   createRecipe,
@@ -13,7 +14,7 @@ import type { RecipeStep, Recipe } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 
 type Page = 'home' | 'add' | 'browse'
-type InputMode = 'upload' | 'url' | 'image'
+type InputMode = 'upload' | 'url' | 'image' | 'text'
 
 type Props = {
   email: Email
@@ -32,6 +33,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
 
   // Import mode state
   const [url, setUrl] = useState('')
+  const [pastedText, setPastedText] = useState('')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const importFileInputRef = useRef<HTMLInputElement>(null)
@@ -120,14 +122,21 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
     if (submitting) return
     if (inputMode === 'url' && url === '') return
     if (inputMode === 'image' && imageFiles.length === 0) return
+    if (inputMode === 'text' && pastedText.trim() === '') return
 
     setSubmitting(true)
     setError(null)
     setSteps(null)
     setSuccess(false)
 
-    const extractPromise =
-      inputMode === 'url' ? extractRecipeFromURL(url) : extractRecipeFromImages(imageFiles)
+    let extractPromise: Promise<{ steps: RecipeStep[] }>
+    if (inputMode === 'url') {
+      extractPromise = extractRecipeFromURL(url)
+    } else if (inputMode === 'image') {
+      extractPromise = extractRecipeFromImages(imageFiles)
+    } else {
+      extractPromise = extractRecipeFromText(pastedText)
+    }
 
     extractPromise
       .then((response) => {
@@ -151,6 +160,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       setSuccess(true)
       setSteps(null)
       setUrl('')
+      setPastedText('')
       clearAllImages()
       setSelectedRecipeId('')
     } catch (err: unknown) {
@@ -173,6 +183,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       setSuccess(true)
       setSteps(null)
       setUrl('')
+      setPastedText('')
       clearAllImages()
       setNewRecipeName('')
       setNewRecipeTags('')
@@ -225,8 +236,18 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
               setInputMode('image')
               resetState()
             }}
+            style={{ marginRight: '0.5rem' }}
           >
             Import from Image
+          </Button>
+          <Button
+            variant={inputMode === 'text' ? 'primary' : 'secondary'}
+            onClick={() => {
+              setInputMode('text')
+              resetState()
+            }}
+          >
+            Paste Text
           </Button>
         </div>
 
@@ -344,6 +365,33 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
               </div>
             )}
             <Button type="submit" disabled={submitting || imageFiles.length === 0}>
+              {submitting ? (
+                <>
+                  <span className="spinner" />
+                  Extracting recipe...
+                </>
+              ) : (
+                'Extract Recipe'
+              )}
+            </Button>
+          </form>
+        )}
+
+        {inputMode === 'text' && (
+          <form onSubmit={handleExtract}>
+            <p style={{ fontSize: '0.875rem', opacity: 0.7, marginBottom: '1rem' }}>
+              Paste recipe text from any source (e.g., copied from a website, email, or document)
+            </p>
+            <textarea
+              placeholder="Paste your recipe text here..."
+              className="input"
+              style={{ minHeight: '200px', resize: 'vertical' }}
+              value={pastedText}
+              onChange={(e) => {
+                setPastedText(e.target.value)
+              }}
+            />
+            <Button type="submit" disabled={submitting || pastedText.trim() === ''}>
               {submitting ? (
                 <>
                   <span className="spinner" />
