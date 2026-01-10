@@ -52,9 +52,10 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   useEffect(() => {
     getRecipes(email)
       .then((response) => {
-        const recipesWithFiles = response.recipeData.map((recipe) => ({
+        const fileData = response.fileData ?? []
+        const recipesWithFiles = (response.recipeData ?? []).map((recipe) => ({
           ...recipe,
-          files: response.fileData
+          files: fileData
             .filter((f) => f.recipe_uuid === recipe.uuid)
             .sort((a, b) => a.page_number - b.page_number),
         }))
