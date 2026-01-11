@@ -1,12 +1,12 @@
-import type { Email } from '../branded'
+import type { Email } from "../branded";
 
-type Page = 'home' | 'add' | 'browse'
+type Page = "home" | "add" | "browse";
 
 type Props = {
-  email: Email
-  currentPage: Page
-  onNavigate: (page: Page) => void
-}
+  email: Email;
+  currentPage: Page;
+  onNavigate: (page: Page) => void;
+};
 
 export function Header({ email, currentPage, onNavigate }: Props) {
   return (
@@ -15,24 +15,24 @@ export function Header({ email, currentPage, onNavigate }: Props) {
         <button
           className="header-logo"
           onClick={() => {
-            onNavigate('home')
+            onNavigate("home");
           }}
         >
           <img src="/icon.png" alt="Hungr" className="header-icon" />
         </button>
         <nav className="header-nav">
           <button
-            className={`header-nav-btn ${currentPage === 'add' ? 'active' : ''}`}
+            className={`header-nav-btn ${currentPage === "add" ? "active" : ""}`}
             onClick={() => {
-              onNavigate('add')
+              onNavigate("add");
             }}
           >
             Add Recipe
           </button>
           <button
-            className={`header-nav-btn ${currentPage === 'browse' ? 'active' : ''}`}
+            className={`header-nav-btn ${currentPage === "browse" ? "active" : ""}`}
             onClick={() => {
-              onNavigate('browse')
+              onNavigate("browse");
             }}
           >
             Browse
@@ -41,5 +41,5 @@ export function Header({ email, currentPage, onNavigate }: Props) {
       </div>
       <span className="header-email">{email}</span>
     </header>
-  )
+  );
 }

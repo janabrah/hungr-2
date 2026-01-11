@@ -1,56 +1,60 @@
-import { useState, useEffect } from 'react'
-import { Home } from './pages/Home'
-import { AddRecipe } from './pages/AddRecipe'
-import { Browse } from './pages/Browse'
-import { Login } from './pages/Login'
-import { getEmail } from './auth'
-import type { Email } from './branded'
+import { useState, useEffect } from "react";
+import { Home } from "./pages/Home";
+import { AddRecipe } from "./pages/AddRecipe";
+import { Browse } from "./pages/Browse";
+import { Login } from "./pages/Login";
+import { getEmail } from "./auth";
+import type { Email } from "./branded";
 
-type Page = 'home' | 'add' | 'browse'
+type Page = "home" | "add" | "browse";
 
 function getPageFromPath(): Page {
-  const path = window.location.pathname
-  if (path === '/add') return 'add'
-  if (path === '/browse') return 'browse'
+  const path = window.location.pathname;
+  if (path === "/add") return "add";
+  if (path === "/browse") return "browse";
   // Support old routes for backwards compatibility
-  if (path === '/upload' || path === '/import') return 'add'
-  return 'home'
+  if (path === "/upload" || path === "/import") return "add";
+  return "home";
 }
 
 function App() {
-  const [page, setPage] = useState<Page>(getPageFromPath)
-  const [email, setEmailState] = useState<Email | null>(getEmail)
+  const [page, setPage] = useState<Page>(getPageFromPath);
+  const [email, setEmailState] = useState<Email | null>(getEmail);
 
   useEffect(() => {
     const handlePopState = () => {
-      setPage(getPageFromPath())
-    }
-    window.addEventListener('popstate', handlePopState)
-    return () => { window.removeEventListener('popstate', handlePopState) }
-  }, [])
+      setPage(getPageFromPath());
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   const navigate = (newPage: Page) => {
-    const path = newPage === 'home' ? '/' : `/${newPage}`
-    window.history.pushState(null, '', path)
-    setPage(newPage)
-  }
+    const path = newPage === "home" ? "/" : `/${newPage}`;
+    window.history.pushState(null, "", path);
+    setPage(newPage);
+  };
 
   const handleLogin = () => {
-    setEmailState(getEmail())
-  }
+    setEmailState(getEmail());
+  };
 
   if (email === null) {
-    return <Login onLogin={handleLogin} />
+    return <Login onLogin={handleLogin} />;
   }
 
   switch (page) {
-    case 'home':
-      return <Home onNavigate={navigate} email={email} currentPage={page} />
-    case 'add':
-      return <AddRecipe email={email} currentPage={page} onNavigate={navigate} />
-    case 'browse':
-      return <Browse email={email} currentPage={page} onNavigate={navigate} />
+    case "home":
+      return <Home onNavigate={navigate} email={email} currentPage={page} />;
+    case "add":
+      return (
+        <AddRecipe email={email} currentPage={page} onNavigate={navigate} />
+      );
+    case "browse":
+      return <Browse email={email} currentPage={page} onNavigate={navigate} />;
   }
 }
 
-export default App
+export default App;
