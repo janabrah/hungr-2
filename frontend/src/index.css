@@ -187,7 +187,64 @@ body {
   font-weight: 500;
 }
 
-.header-email {
+.header-email-btn {
+  background: none;
+  border: none;
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 0.875rem;
+  opacity: 0.7;
+  padding: 0;
+}
+
+.header-email-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.header-email-btn.active {
+  opacity: 1;
+  font-weight: 500;
+}
+
+.friends-section {
+  margin-bottom: 2rem;
+}
+
+.friends-section-note {
+  margin-top: 0;
+}
+
+.friends-muted {
+  opacity: 0.7;
+}
+
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.friends-card {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.friends-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.friends-card-name {
+  font-weight: 600;
+}
+
+.friends-card-email {
   font-size: 0.875rem;
   opacity: 0.7;
 }

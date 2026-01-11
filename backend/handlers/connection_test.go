@@ -34,7 +34,7 @@ func TestCreateConnection_Success(t *testing.T) {
 	storage.DeleteConnection(user1.UUID, user2.UUID)
 
 	body := `{"target_user_uuid": "` + user2.UUID.String() + `"}`
-	req := httptest.NewRequest("POST", "/api/connections?source_user_uuid="+user1.UUID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/api/connections?email="+testEmail, bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -51,7 +51,7 @@ func TestCreateConnection_Success(t *testing.T) {
 	storage.DeleteConnection(user1.UUID, user2.UUID)
 }
 
-func TestCreateConnection_MissingSourceUser(t *testing.T) {
+func TestCreateConnection_MissingEmail(t *testing.T) {
 	body := `{"target_user_uuid": "00000000-0000-0000-0000-000000000001"}`
 	req := httptest.NewRequest("POST", "/api/connections", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -67,9 +67,9 @@ func TestCreateConnection_MissingSourceUser(t *testing.T) {
 	}
 }
 
-func TestCreateConnection_InvalidSourceUUID(t *testing.T) {
+func TestCreateConnection_InvalidEmail(t *testing.T) {
 	body := `{"target_user_uuid": "00000000-0000-0000-0000-000000000001"}`
-	req := httptest.NewRequest("POST", "/api/connections?source_user_uuid=invalid", bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/api/connections?email=nonexistent@example.com", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -78,18 +78,16 @@ func TestCreateConnection_InvalidSourceUUID(t *testing.T) {
 	resp := w.Result()
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", resp.StatusCode)
 	}
 }
 
 func TestCreateConnection_MissingTargetUser(t *testing.T) {
 	ensureTestUser(t)
 
-	user1, _ := storage.GetUserByEmail(testEmail)
-
 	body := `{}`
-	req := httptest.NewRequest("POST", "/api/connections?source_user_uuid="+user1.UUID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/api/connections?email="+testEmail, bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -109,7 +107,7 @@ func TestCreateConnection_SelfConnection(t *testing.T) {
 	user1, _ := storage.GetUserByEmail(testEmail)
 
 	body := `{"target_user_uuid": "` + user1.UUID.String() + `"}`
-	req := httptest.NewRequest("POST", "/api/connections?source_user_uuid="+user1.UUID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/api/connections?email="+testEmail, bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -126,10 +124,8 @@ func TestCreateConnection_SelfConnection(t *testing.T) {
 func TestCreateConnection_TargetNotFound(t *testing.T) {
 	ensureTestUser(t)
 
-	user1, _ := storage.GetUserByEmail(testEmail)
-
 	body := `{"target_user_uuid": "00000000-0000-0000-0000-000000000001"}`
-	req := httptest.NewRequest("POST", "/api/connections?source_user_uuid="+user1.UUID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/api/connections?email="+testEmail, bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -156,7 +152,7 @@ func TestCreateConnection_Duplicate(t *testing.T) {
 	defer storage.DeleteConnection(user1.UUID, user2.UUID)
 
 	body := `{"target_user_uuid": "` + user2.UUID.String() + `"}`
-	req := httptest.NewRequest("POST", "/api/connections?source_user_uuid="+user1.UUID.String(), bytes.NewBufferString(body))
+	req := httptest.NewRequest("POST", "/api/connections?email="+testEmail, bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -296,7 +292,7 @@ func TestDeleteConnection_Success(t *testing.T) {
 	storage.DeleteConnection(user1.UUID, user2.UUID)
 	storage.CreateConnection(user1.UUID, user2.UUID)
 
-	req := httptest.NewRequest("DELETE", "/api/connections?source_user_uuid="+user1.UUID.String()+"&target_user_uuid="+user2.UUID.String(), nil)
+	req := httptest.NewRequest("DELETE", "/api/connections?email="+testEmail+"&target_user_uuid="+user2.UUID.String(), nil)
 	w := httptest.NewRecorder()
 
 	DeleteConnection(w, req)
@@ -315,8 +311,8 @@ func TestDeleteConnection_Success(t *testing.T) {
 	}
 }
 
-func TestDeleteConnection_MissingParams(t *testing.T) {
-	req := httptest.NewRequest("DELETE", "/api/connections", nil)
+func TestDeleteConnection_MissingEmail(t *testing.T) {
+	req := httptest.NewRequest("DELETE", "/api/connections?target_user_uuid=00000000-0000-0000-0000-000000000001", nil)
 	w := httptest.NewRecorder()
 
 	DeleteConnection(w, req)
@@ -329,8 +325,24 @@ func TestDeleteConnection_MissingParams(t *testing.T) {
 	}
 }
 
-func TestDeleteConnection_InvalidSourceUUID(t *testing.T) {
-	req := httptest.NewRequest("DELETE", "/api/connections?source_user_uuid=invalid&target_user_uuid=00000000-0000-0000-0000-000000000001", nil)
+func TestDeleteConnection_InvalidEmail(t *testing.T) {
+	req := httptest.NewRequest("DELETE", "/api/connections?email=nonexistent@example.com&target_user_uuid=00000000-0000-0000-0000-000000000001", nil)
+	w := httptest.NewRecorder()
+
+	DeleteConnection(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", resp.StatusCode)
+	}
+}
+
+func TestDeleteConnection_MissingTargetUUID(t *testing.T) {
+	ensureTestUser(t)
+
+	req := httptest.NewRequest("DELETE", "/api/connections?email="+testEmail, nil)
 	w := httptest.NewRecorder()
 
 	DeleteConnection(w, req)
@@ -344,7 +356,9 @@ func TestDeleteConnection_InvalidSourceUUID(t *testing.T) {
 }
 
 func TestDeleteConnection_InvalidTargetUUID(t *testing.T) {
-	req := httptest.NewRequest("DELETE", "/api/connections?source_user_uuid=00000000-0000-0000-0000-000000000001&target_user_uuid=invalid", nil)
+	ensureTestUser(t)
+
+	req := httptest.NewRequest("DELETE", "/api/connections?email="+testEmail+"&target_user_uuid=invalid", nil)
 	w := httptest.NewRecorder()
 
 	DeleteConnection(w, req)

@@ -6,14 +6,14 @@ import {
   getRecipes,
   updateRecipeSteps,
   createRecipe,
+  getFriendlyErrorMessage,
 } from "../api";
 import { Button, CloseButton } from "../components/Button";
 import { Header } from "../components/Header";
 import { RecipeSteps } from "../components/RecipeSteps";
-import type { RecipeStep, Recipe } from "../types.gen";
+import type { RecipeStepResponse as RecipeStep, Recipe } from "../types.gen";
 import { asUUID, type Email } from "../branded";
-
-type Page = "home" | "add" | "browse";
+import type { Page } from "../types";
 type InputMode = "url" | "image" | "text";
 
 type Props = {
@@ -111,9 +111,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
         setSteps(response.steps);
       })
       .catch((err: unknown) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to extract recipe",
-        );
+        setError(getFriendlyErrorMessage(err, "Failed to extract recipe"));
       })
       .finally(() => {
         setSubmitting(false);
@@ -134,7 +132,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       clearAllImages();
       setSelectedRecipeId("");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save steps");
+      setError(getFriendlyErrorMessage(err, "Failed to save steps"));
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +163,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       setNewRecipeName("");
       setNewRecipeTags("");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create recipe");
+      setError(getFriendlyErrorMessage(err, "Failed to create recipe"));
     } finally {
       setSubmitting(false);
     }

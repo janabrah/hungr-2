@@ -94,3 +94,23 @@ func DeleteConnection(sourceUserUUID, targetUserUUID uuid.UUID) error {
 	_, err := db.Exec(context.Background(), queryDeleteConnection, sourceUserUUID, targetUserUUID)
 	return err
 }
+
+func DeleteConnectionsBidirectional(sourceUserUUID, targetUserUUID uuid.UUID) error {
+	ctx := context.Background()
+	tx, err := BeginTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+	if _, err := tx.tx.Exec(ctx, queryDeleteConnection, sourceUserUUID, targetUserUUID); err != nil {
+		return err
+	}
+	if _, err := tx.tx.Exec(ctx, queryDeleteConnection, targetUserUUID, sourceUserUUID); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}

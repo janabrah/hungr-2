@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, IconButton } from "./Button";
-import type { RecipeStep } from "../types.gen";
+import type { RecipeStepResponse as RecipeStep } from "../types.gen";
 
 type Props = {
   steps: RecipeStep[];

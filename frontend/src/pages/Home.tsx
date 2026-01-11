@@ -2,8 +2,7 @@ import { clearEmail } from "../auth";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import type { Email } from "../branded";
-
-type Page = "home" | "add" | "browse";
+import type { Page } from "../types";
 
 type Props = {
   onNavigate: (page: Page) => void;

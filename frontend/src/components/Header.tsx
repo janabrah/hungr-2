@@ -1,6 +1,6 @@
 import type { Email } from "../branded";
 
-type Page = "home" | "add" | "browse";
+type Page = "home" | "add" | "browse" | "friends";
 
 type Props = {
   email: Email;
@@ -39,7 +39,14 @@ export function Header({ email, currentPage, onNavigate }: Props) {
           </button>
         </nav>
       </div>
-      <span className="header-email">{email}</span>
+      <button
+        className={`header-email-btn ${currentPage === "friends" ? "active" : ""}`}
+        onClick={() => {
+          onNavigate("friends");
+        }}
+      >
+        {email}
+      </button>
     </header>
   );
 }

@@ -5,16 +5,20 @@ import {
   deleteRecipe,
   getRecipeSteps,
   updateRecipeSteps,
+  getFriendlyErrorMessage,
 } from "../api";
 import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { RecipeSteps } from "../components/RecipeSteps";
 import { RecipeStepsEditor } from "../components/RecipeStepsEditor";
 import { TagFilter } from "../components/TagFilter";
-import type { Recipe, File, RecipeStep } from "../types.gen";
+import type {
+  Recipe,
+  File,
+  RecipeStepResponse as RecipeStep,
+} from "../types.gen";
 import { asUUID, type Email } from "../branded";
-
-type Page = "home" | "add" | "browse";
+import type { Page } from "../types";
 
 type Props = {
   email: Email;
@@ -70,7 +74,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
         setRecipes(recipesWithFiles);
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Failed to load recipes");
+        setError(getFriendlyErrorMessage(err, "Failed to load recipes"));
       })
       .finally(() => {
         setLoading(false);
@@ -108,7 +112,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
       setSteps(newSteps);
       setEditingSteps(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save steps");
+      setError(getFriendlyErrorMessage(err, "Failed to save steps"));
     } finally {
       setSavingSteps(false);
     }
@@ -141,9 +145,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
         setSelectedRecipeId("");
       })
       .catch((err: unknown) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to delete recipe",
-        );
+        setError(getFriendlyErrorMessage(err, "Failed to delete recipe"));
       })
       .finally(() => {
         setDeleting(false);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { setEmail } from "../auth";
-import { login } from "../api";
+import { getFriendlyErrorMessage, login } from "../api";
 import { Button } from "../components/Button";
 import { asEmail } from "../branded";
 
@@ -30,7 +30,7 @@ export function Login({ onLogin }: Props) {
         onLogin();
       })
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Login failed");
+        setError(getFriendlyErrorMessage(err, "Login failed"));
       })
       .finally(() => {
         setLoading(false);
