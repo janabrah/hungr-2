@@ -51,7 +51,7 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
       ingredients: parseIngredients(ingredientInputs[i] ?? ''),
     }))
     const cleaned = stepsWithParsedIngredients.filter((s) => s.instruction.trim() !== '')
-    onSave(cleaned)
+    void onSave(cleaned)
   }
 
   return (
@@ -73,7 +73,7 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
             className="input recipe-step-instruction-input"
             placeholder="Instruction"
             value={step.instruction}
-            onChange={(e) => updateInstruction(index, e.target.value)}
+            onChange={(e) => { updateInstruction(index, e.target.value) }}
             disabled={saving}
             rows={2}
           />
@@ -82,7 +82,7 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
             className="input recipe-step-ingredients-input"
             placeholder="2 cups flour; 1 tsp salt; 3 eggs"
             value={ingredientInputs[index] ?? ''}
-            onChange={(e) => updateIngredientInput(index, e.target.value)}
+            onChange={(e) => { updateIngredientInput(index, e.target.value) }}
             disabled={saving}
           />
           <span className="recipe-step-help">Separate ingredients with semicolons</span>

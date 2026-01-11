@@ -34,7 +34,7 @@ export function TagFilter({ value, onChange }: Props) {
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    return () => { document.removeEventListener('mousedown', handleClickOutside) }
   }, [])
 
   useEffect(() => {
@@ -71,13 +71,13 @@ export function TagFilter({ value, onChange }: Props) {
     ? 'Filter by tags...'
     : value.length === 1
       ? value[0]
-      : `${value.length} tags selected`
+      : `${String(value.length)} tags selected`
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen(!open) }}
         className="select"
         style={{
           marginBottom: 0,
@@ -113,7 +113,7 @@ export function TagFilter({ value, onChange }: Props) {
               type="text"
               placeholder="Search tags..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value) }}
               style={{
                 width: '100%',
                 padding: '0.25rem 0.5rem',
@@ -129,7 +129,7 @@ export function TagFilter({ value, onChange }: Props) {
             {value.length > 0 && search === '' && (
               <button
                 type="button"
-                onClick={() => onChange([])}
+                onClick={() => { onChange([]) }}
                 style={{
                   width: '100%',
                   padding: '0.5rem',
@@ -165,7 +165,7 @@ export function TagFilter({ value, onChange }: Props) {
                   <input
                     type="checkbox"
                     checked={value.includes(tag.name)}
-                    onChange={() => toggleTag(tag.name)}
+                    onChange={() => { toggleTag(tag.name) }}
                   />
                   {tag.name}
                 </label>
