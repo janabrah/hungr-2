@@ -52,8 +52,8 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   useEffect(() => {
     getRecipes(email)
       .then((response) => {
-        const fileData = response.fileData ?? []
-        const recipesWithFiles = (response.recipeData ?? []).map((recipe) => ({
+        const fileData = response.fileData
+        const recipesWithFiles = response.recipeData.map((recipe) => ({
           ...recipe,
           files: fileData
             .filter((f) => f.recipe_uuid === recipe.uuid)
@@ -190,7 +190,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
               <RecipeStepsEditor
                 steps={steps}
                 onSave={handleSaveSteps}
-                onCancel={() => setEditingSteps(false)}
+                onCancel={() => { setEditingSteps(false) }}
                 saving={savingSteps}
               />
             ) : (
