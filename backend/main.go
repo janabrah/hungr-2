@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/api/extract-recipe-image", middleware.RequestLogger(middleware.CORS(handleExtractRecipeImage, "POST, OPTIONS")))
 	http.HandleFunc("/api/extract-recipe-text", middleware.RequestLogger(middleware.CORS(handleExtractRecipeText, "POST, OPTIONS")))
 	http.HandleFunc("/api/tags", middleware.RequestLogger(middleware.CORS(handleTags, "GET, OPTIONS")))
+	http.HandleFunc("/api/connections", middleware.RequestLogger(middleware.CORS(handleConnections, "GET, POST, DELETE, OPTIONS")))
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -135,6 +136,19 @@ func handleTags(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		handlers.GetTags(w, r)
 	} else {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleConnections(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		handlers.GetConnections(w, r)
+	case "POST":
+		handlers.CreateConnection(w, r)
+	case "DELETE":
+		handlers.DeleteConnection(w, r)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
