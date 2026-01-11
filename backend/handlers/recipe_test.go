@@ -21,15 +21,12 @@ var _ = uuid.Nil
 
 func init() {
 	logger.Init()
-}
-
-func skipIfNoDatabase(t *testing.T) {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		t.Skip("DATABASE_URL not set, skipping integration test")
+		panic("DATABASE_URL must be set to run tests")
 	}
 	if err := storage.Init(dbURL); err != nil {
-		t.Skipf("Could not connect to database: %v", err)
+		panic("Failed to connect to database: " + err.Error())
 	}
 }
 
@@ -46,7 +43,6 @@ func ensureTestUser(t *testing.T) {
 }
 
 func TestGetRecipes_ReturnsJSON(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	req := httptest.NewRequest("GET", "/api/recipes?email="+testEmail, nil)
@@ -133,7 +129,6 @@ func TestCreateRecipe_MissingEmail(t *testing.T) {
 }
 
 func TestCreateRecipe_WithFiles(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	body := &bytes.Buffer{}
@@ -181,7 +176,6 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 }
 
 func TestCreateRecipe_MultipleFiles(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	body := &bytes.Buffer{}
@@ -290,7 +284,6 @@ func TestUpdateRecipeSteps_InvalidUUID(t *testing.T) {
 }
 
 func TestUpdateRecipeSteps_RecipeNotFound(t *testing.T) {
-	skipIfNoDatabase(t)
 
 	body := `{"steps": []}`
 	req := httptest.NewRequest("PUT", "/api/recipes/00000000-0000-0000-0000-000000000001/steps", bytes.NewBufferString(body))
@@ -308,7 +301,6 @@ func TestUpdateRecipeSteps_RecipeNotFound(t *testing.T) {
 }
 
 func TestUpdateRecipeSteps_InvalidIngredient(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	// Create a recipe first
@@ -335,7 +327,6 @@ func TestUpdateRecipeSteps_InvalidIngredient(t *testing.T) {
 }
 
 func TestUpdateRecipeSteps_ValidRequest(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	// Create a recipe first
@@ -382,7 +373,6 @@ func TestUpdateRecipeSteps_ValidRequest(t *testing.T) {
 }
 
 func TestUpdateRecipeSteps_RoundTrip(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	// Create a recipe

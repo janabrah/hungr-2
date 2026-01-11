@@ -9,7 +9,6 @@ import (
 )
 
 func TestCreateStepIngredientWithUnit(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("ingredient-unit-test", testEmail, "test")
@@ -86,7 +85,6 @@ func TestCreateStepIngredientWithUnit(t *testing.T) {
 }
 
 func TestCreateStepIngredientWithUnit_InvalidUnit(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("invalid-unit-test", testEmail, "test")
@@ -112,7 +110,6 @@ func TestCreateStepIngredientWithUnit_InvalidUnit(t *testing.T) {
 }
 
 func TestComplexRecipeWithIngredients(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("complex-recipe-test", testEmail, "baking, dessert")

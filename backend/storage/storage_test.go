@@ -54,20 +54,17 @@ func TestCreateTagUUID(t *testing.T) {
 	}
 }
 
-func skipIfNoDatabase(t *testing.T) {
+func init() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		t.Skip("DATABASE_URL not set, skipping integration test")
+		panic("DATABASE_URL must be set to run tests")
 	}
-	if db == nil {
-		if err := Init(dbURL); err != nil {
-			t.Skipf("Could not connect to database: %v", err)
-		}
+	if err := Init(dbURL); err != nil {
+		panic("Failed to connect to database: " + err.Error())
 	}
 }
 
 func TestGetRecipesByUserEmail(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipes, err := GetRecipesByUserEmail(testEmail)
@@ -81,7 +78,6 @@ func TestGetRecipesByUserEmail(t *testing.T) {
 }
 
 func TestInsertRecipeByEmail(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("test-recipe", testEmail, "test, tags")
@@ -101,7 +97,6 @@ func TestInsertRecipeByEmail(t *testing.T) {
 }
 
 func TestInsertAndGetFile(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("file-test", testEmail, "test")
@@ -143,7 +138,6 @@ func TestInsertAndGetFile(t *testing.T) {
 }
 
 func TestUpsertTag(t *testing.T) {
-	skipIfNoDatabase(t)
 
 	tagUUID := CreateTagUUID("test-tag")
 	tag, err := UpsertTag(tagUUID, "test-tag")
@@ -168,7 +162,6 @@ func TestUpsertTag(t *testing.T) {
 }
 
 func TestMultipleFilesPerRecipe(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("multi-file-test", testEmail, "test")
@@ -196,7 +189,6 @@ func TestMultipleFilesPerRecipe(t *testing.T) {
 }
 
 func TestDeleteRecipe(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	recipe, err := InsertRecipeByEmail("delete-test", testEmail, "test")
@@ -234,7 +226,6 @@ func TestDeleteRecipe(t *testing.T) {
 }
 
 func TestTransactionCommit(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	ctx := context.Background()
@@ -300,7 +291,6 @@ func TestTransactionCommit(t *testing.T) {
 }
 
 func TestTransactionRollback(t *testing.T) {
-	skipIfNoDatabase(t)
 	ensureTestUser(t)
 
 	ctx := context.Background()
