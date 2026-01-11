@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/cobyabrahams/hungr/logger"
 	"github.com/cobyabrahams/hungr/models"
@@ -13,15 +14,16 @@ import (
 func CreateConnection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	sourceUserUUIDStr := r.URL.Query().Get("source_user_uuid")
-	if sourceUserUUIDStr == "" {
-		respondWithError(w, http.StatusBadRequest, "source_user_uuid is required")
+	// Authenticate via email
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		respondWithError(w, http.StatusBadRequest, "email is required")
 		return
 	}
 
-	sourceUserUUID, err := uuid.FromString(sourceUserUUIDStr)
+	authUser, err := storage.GetUserByEmail(email)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid source_user_uuid")
+		respondWithError(w, http.StatusUnauthorized, "invalid user")
 		return
 	}
 
@@ -35,6 +37,9 @@ func CreateConnection(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "target_user_uuid is required")
 		return
 	}
+
+	// Use authenticated user's UUID as source (prevents spoofing)
+	sourceUserUUID := authUser.UUID
 
 	if sourceUserUUID == req.TargetUserUUID {
 		respondWithError(w, http.StatusBadRequest, "cannot connect to yourself")
@@ -125,17 +130,22 @@ func GetConnections(w http.ResponseWriter, r *http.Request) {
 func DeleteConnection(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	sourceUserUUIDStr := r.URL.Query().Get("source_user_uuid")
-	targetUserUUIDStr := r.URL.Query().Get("target_user_uuid")
-
-	if sourceUserUUIDStr == "" || targetUserUUIDStr == "" {
-		respondWithError(w, http.StatusBadRequest, "source_user_uuid and target_user_uuid are required")
+	// Authenticate via email
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		respondWithError(w, http.StatusBadRequest, "email is required")
 		return
 	}
 
-	sourceUserUUID, err := uuid.FromString(sourceUserUUIDStr)
+	authUser, err := storage.GetUserByEmail(email)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "invalid source_user_uuid")
+		respondWithError(w, http.StatusUnauthorized, "invalid user")
+		return
+	}
+
+	targetUserUUIDStr := r.URL.Query().Get("target_user_uuid")
+	if targetUserUUIDStr == "" {
+		respondWithError(w, http.StatusBadRequest, "target_user_uuid is required")
 		return
 	}
 
@@ -145,7 +155,24 @@ func DeleteConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = storage.DeleteConnection(sourceUserUUID, targetUserUUID)
+	// Use authenticated user's UUID as source (prevents spoofing)
+	sourceUserUUID := authUser.UUID
+
+	bidirectional := false
+	if bidirectionalStr := r.URL.Query().Get("bidirectional"); bidirectionalStr != "" {
+		parsed, parseErr := strconv.ParseBool(bidirectionalStr)
+		if parseErr != nil {
+			respondWithError(w, http.StatusBadRequest, "invalid bidirectional flag")
+			return
+		}
+		bidirectional = parsed
+	}
+
+	if bidirectional {
+		err = storage.DeleteConnectionsBidirectional(sourceUserUUID, targetUserUUID)
+	} else {
+		err = storage.DeleteConnection(sourceUserUUID, targetUserUUID)
+	}
 	if err != nil {
 		logger.Error(ctx, "failed to delete connection", err,
 			"source_user_uuid", sourceUserUUID, "target_user_uuid", targetUserUUID)

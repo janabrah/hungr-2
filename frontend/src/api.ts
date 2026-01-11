@@ -1,4 +1,7 @@
 import type {
+  ConnectionsResponse,
+  User,
+  UserResponse,
   RecipesResponse,
   UploadResponse,
   RecipeStepsResponse,
@@ -8,6 +11,17 @@ import type { Email, UUID } from "./branded";
 
 export const API_BASE =
   import.meta.env.VITE_API_BASE ?? "http://localhost:8080";
+
+const FETCH_FAILURE_MESSAGE =
+  "Unable to reach the API. Check that the backend is running and VITE_API_BASE is correct.";
+
+export function getFriendlyErrorMessage(
+  err: unknown,
+  fallback: string,
+): string {
+  const message = err instanceof Error ? err.message : fallback;
+  return message === "Failed to fetch" ? FETCH_FAILURE_MESSAGE : message;
+}
 
 export async function login(email: string): Promise<void> {
   const response = await fetch(`${API_BASE}/api/auth/login`, {
@@ -182,4 +196,93 @@ export async function getTags(): Promise<Tag[]> {
   }
   const data = (await response.json()) as { tags: Tag[] };
   return data.tags;
+}
+
+export async function getUserByEmail(email: Email): Promise<User> {
+  const response = await fetch(
+    `${API_BASE}/api/users?email=${encodeURIComponent(email)}`,
+  );
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    throw new Error(
+      data.error ?? `Failed to fetch user: ${response.status.toString()}`,
+    );
+  }
+  const data = (await response.json()) as UserResponse;
+  return data.user;
+}
+
+export async function getConnections(
+  userUUID: UUID,
+  direction: "outgoing" | "incoming",
+): Promise<User[]> {
+  const params = new URLSearchParams({ user_uuid: userUUID, direction });
+  const response = await fetch(
+    `${API_BASE}/api/connections?${params.toString()}`,
+  );
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    throw new Error(
+      data.error ??
+        `Failed to fetch connections: ${response.status.toString()}`,
+    );
+  }
+  const data = (await response.json()) as ConnectionsResponse;
+  return data.connections;
+}
+
+export async function createConnection(
+  email: Email,
+  targetUserUUID: UUID,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE}/api/connections?email=${encodeURIComponent(email)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_user_uuid: targetUserUUID }),
+    },
+  );
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    throw new Error(
+      data.error ??
+        `Failed to create connection: ${response.status.toString()}`,
+    );
+  }
+}
+
+export async function deleteConnection(
+  email: Email,
+  targetUserUUID: UUID,
+  bidirectional = false,
+): Promise<void> {
+  const params = new URLSearchParams({
+    email,
+    target_user_uuid: targetUserUUID,
+  });
+  if (bidirectional) {
+    params.set("bidirectional", "true");
+  }
+  const response = await fetch(
+    `${API_BASE}/api/connections?${params.toString()}`,
+    {
+      method: "DELETE",
+    },
+  );
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    throw new Error(
+      data.error ??
+        `Failed to delete connection: ${response.status.toString()}`,
+    );
+  }
 }

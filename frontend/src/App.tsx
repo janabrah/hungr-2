@@ -2,16 +2,17 @@ import { useState, useEffect } from "react";
 import { Home } from "./pages/Home";
 import { AddRecipe } from "./pages/AddRecipe";
 import { Browse } from "./pages/Browse";
+import { Friends } from "./pages/Friends";
 import { Login } from "./pages/Login";
 import { getEmail } from "./auth";
 import type { Email } from "./branded";
-
-type Page = "home" | "add" | "browse";
+import type { Page } from "./types";
 
 function getPageFromPath(): Page {
   const path = window.location.pathname;
   if (path === "/add") return "add";
   if (path === "/browse") return "browse";
+  if (path === "/friends") return "friends";
   // Support old routes for backwards compatibility
   if (path === "/upload" || path === "/import") return "add";
   return "home";
@@ -54,6 +55,8 @@ function App() {
       );
     case "browse":
       return <Browse email={email} currentPage={page} onNavigate={navigate} />;
+    case "friends":
+      return <Friends email={email} currentPage={page} onNavigate={navigate} />;
   }
 }
 

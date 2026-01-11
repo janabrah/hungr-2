@@ -23,7 +23,7 @@
 ## Coding Style & Naming Conventions
 - Go code is formatted with `gofmt`; keep handler logic in `handlers/` and DB access in `storage/`.
 - TypeScript uses `.tsx` for components; prefer PascalCase for component files (e.g., `RecipeSteps.tsx`).
-- Treat `frontend/src/types.gen.ts` as generated; update via `make types` instead of manual edits.
+- Treat `frontend/src/types.gen.ts` as generated; update via `make types` after changing backend models.
 
 ## Testing Guidelines
 - Backend tests rely on `DATABASE_URL_TEST` (see `backend/Makefile`); `make test` prepares a test DB.
