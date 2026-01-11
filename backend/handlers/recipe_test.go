@@ -310,7 +310,7 @@ func TestUpdateRecipeSteps_InvalidIngredient(t *testing.T) {
 	}
 	defer storage.DeleteRecipe(recipe.UUID)
 
-	body := `{"steps": [{"instruction": "Test", "ingredients": ["invalid"]}]}`
+	body := `{"steps": [{"instruction": "Test", "ingredients": ["2"]}]}`
 	req := httptest.NewRequest("PUT", "/api/recipes/"+recipe.UUID.String()+"/steps", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
