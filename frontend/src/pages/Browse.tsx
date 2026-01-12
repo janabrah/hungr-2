@@ -11,6 +11,7 @@ import { Button } from "../components/Button";
 import { Header } from "../components/Header";
 import { RecipeSteps } from "../components/RecipeSteps";
 import { RecipeStepsEditor } from "../components/RecipeStepsEditor";
+import { RecipeSelect } from "../components/RecipeSelect";
 import { TagFilter } from "../components/TagFilter";
 import type {
   Recipe,
@@ -130,8 +131,8 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   const selectedRecipe =
     recipes.find((r) => r.uuid === selectedRecipeId) ?? null;
 
-  const handleSelectRecipe = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedRecipeId(event.target.value);
+  const handleRecipeSelect = (recipeId: string) => {
+    setSelectedRecipeId(recipeId);
   };
 
   const handleDelete = () => {
@@ -167,21 +168,12 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
         {loading ? (
           <p>Loading...</p>
         ) : (
-          <select
-            className="select"
-            onChange={handleSelectRecipe}
-            value={selectedRecipeId}
-          >
-            <option value="" disabled>
-              Select a recipe
-            </option>
-            {filteredRecipes.map((recipe) => (
-              <option key={recipe.uuid} value={recipe.uuid}>
-                {recipe.name}
-                {recipe.tag_string ? ` - ${recipe.tag_string}` : ""}
-              </option>
-            ))}
-          </select>
+          <RecipeSelect
+            recipes={filteredRecipes}
+            selectedRecipeId={selectedRecipeId}
+            onSelect={handleRecipeSelect}
+            viewerEmail={email}
+          />
         )}
 
         {selectedRecipe !== null && (
