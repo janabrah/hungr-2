@@ -70,6 +70,7 @@ export interface Recipe {
   uuid: string;
   name: string;
   user_uuid: string;
+  owner_email: string;
   tag_string: string;
   created_at: string;
 }

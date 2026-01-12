@@ -7,11 +7,12 @@ import (
 )
 
 type Recipe struct {
-	UUID      uuid.UUID `json:"uuid"`
-	Name      string    `json:"name"`
-	User      uuid.UUID `json:"user_uuid"`
-	TagString string    `json:"tag_string"`
-	CreatedAt time.Time `json:"created_at"`
+	UUID       uuid.UUID `json:"uuid"`
+	Name       string    `json:"name"`
+	User       uuid.UUID `json:"user_uuid"`
+	OwnerEmail string    `json:"owner_email"`
+	TagString  string    `json:"tag_string"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type File struct {
