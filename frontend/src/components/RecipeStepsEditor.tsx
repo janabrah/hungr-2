@@ -50,8 +50,7 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
       ...step,
       ingredients: parseIngredients(ingredientInputs[i] ?? ''),
     }))
-    const cleaned = stepsWithParsedIngredients.filter((s) => s.instruction.trim() !== '')
-    void onSave(cleaned)
+    void onSave(stepsWithParsedIngredients)
   }
 
   return (
