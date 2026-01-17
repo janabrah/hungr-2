@@ -25,6 +25,7 @@ type DerivedUnit struct {
 	Abbrev       string
 	PluralName   string
 	PluralAbbrev string
+	NoDisplay    bool // If true, unit can be parsed but won't be chosen for display
 }
 
 // VolumeUnits (base: ml)
@@ -32,18 +33,23 @@ var VolumeUnits = map[string]DerivedUnit{
 	"ml": {ToBase: 1, Name: "milliliter", Abbrev: "ml", PluralName: "milliliters"},
 	"l":  {ToBase: 1000, Name: "liter", Abbrev: "l", PluralName: "liters"},
 
-	"tsp":   {ToBase: 4.92892, Name: "teaspoon", Abbrev: "tsp", PluralName: "teaspoons"},
-	"tbsp":  {ToBase: 14.7868, Name: "tablespoon", Abbrev: "tbsp", PluralName: "tablespoons"},
-	"fl_oz": {ToBase: 29.5735, Name: "fluid ounce", Abbrev: "fl oz", PluralName: "fluid ounces"},
-	"cup":   {ToBase: 236.588, Name: "cup", Abbrev: "cup", PluralName: "cups"},
+	"tsp":      {ToBase: 4.92892, Name: "teaspoon", Abbrev: "tsp", PluralName: "teaspoons"},
+	"half_tsp": {ToBase: 2.46446, Name: "half teaspoon", Abbrev: "½ tsp", PluralName: "half teaspoons"},
+	"qtr_tsp":  {ToBase: 1.23223, Name: "quarter teaspoon", Abbrev: "¼ tsp", PluralName: "quarter teaspoons"},
+	"eighth_tsp": {ToBase: 0.616115, Name: "eighth teaspoon", Abbrev: "⅛ tsp", PluralName: "eighth teaspoons"},
+	"tbsp":   {ToBase: 14.7868, Name: "tablespoon", Abbrev: "tbsp", PluralName: "tablespoons"},
+	"fl_oz":  {ToBase: 29.5735, Name: "fluid ounce", Abbrev: "fl oz", PluralName: "fluid ounces", NoDisplay: true},
+	"jigger": {ToBase: 44.3603, Name: "jigger", Abbrev: "jigger", PluralName: "jiggers", NoDisplay: true},
+	"cup":      {ToBase: 236.588, Name: "cup", Abbrev: "cup", PluralName: "cups"},
+	"half_cup": {ToBase: 118.294, Name: "half cup", Abbrev: "½ cup", PluralName: "half cups"},
+	"gill":     {ToBase: 118.294, Name: "gill", Abbrev: "gill", PluralName: "gills", NoDisplay: true},
+	"qtr_cup":  {ToBase: 59.147, Name: "quarter cup", Abbrev: "¼ cup", PluralName: "quarter cups"},
 	//	"pt":     {ToBase: 473.176, Name: "pint", Abbrev: "pt", PluralName: "pints"},
-	"qt":     {ToBase: 946.353, Name: "quart", Abbrev: "qt", PluralName: "quarts"},
-	"gal":    {ToBase: 3785.41, Name: "gallon", Abbrev: "gal", PluralName: "gallons"},
-	"gill":   {ToBase: 118.294, Name: "gill", Abbrev: "gill", PluralName: "gills"},
-	"jigger": {ToBase: 44.3603, Name: "jigger", Abbrev: "jigger", PluralName: "jiggers"},
+	"qt":  {ToBase: 946.353, Name: "quart", Abbrev: "qt", PluralName: "quarts"},
+	"gal": {ToBase: 3785.41, Name: "gallon", Abbrev: "gal", PluralName: "gallons"},
 
-	"drop":    {ToBase: 0.05, Name: "drop", Abbrev: "drop", PluralName: "drops"},
-	"smidgen": {ToBase: 0.115522, Name: "smidgen", Abbrev: "smidgen", PluralName: "smidgens"},
+	"drop":    {ToBase: 0.05, Name: "drop", Abbrev: "drop", PluralName: "drops", NoDisplay: true},
+	"smidgen": {ToBase: 0.115522, Name: "smidgen", Abbrev: "smidgen", PluralName: "smidgens", NoDisplay: true},
 	"pinch":   {ToBase: 0.231043, Name: "pinch", Abbrev: "pinch", PluralName: "pinches"},
 	"dash":    {ToBase: 0.462086, Name: "dash", Abbrev: "dash", PluralName: "dashes"},
 
@@ -54,8 +60,6 @@ var VolumeUnits = map[string]DerivedUnit{
 	"imp_pt":     {ToBase: 568.261, Name: "imperial pint", Abbrev: "imp pt", PluralName: "imperial pints"},
 	"imp_qt":     {ToBase: 1136.52, Name: "imperial quart", Abbrev: "imp qt", PluralName: "imperial quarts"},
 	"imp_gal":    {ToBase: 4546.09, Name: "imperial gallon", Abbrev: "imp gal", PluralName: "imperial gallons"},
-	"imp_gill":   {ToBase: 142.065, Name: "imperial gill", Abbrev: "imp gill", PluralName: "imperial gills"},
-	"imp_jigger": {ToBase: 35.5163, Name: "imperial jigger", Abbrev: "imp jigger", PluralName: "imperial jiggers"},
 }
 
 // MassUnits (base: mg)
@@ -208,6 +212,9 @@ func FindBestIntegerUnitWithTolerance(baseValue float64, category UnitCategory, 
 
 	for _, unitKey := range sortedUnits {
 		unit := unitMap[unitKey]
+		if unit.NoDisplay {
+			continue
+		}
 		converted := baseValue / unit.ToBase
 		if converted >= 1 && isNearInteger(converted, tolerance) {
 			return Quantity{
@@ -296,6 +303,27 @@ func ParseUnit(s string) (string, UnitCategory, error) {
 		"litres":                "l",
 		"teaspoon":              "tsp",
 		"teaspoons":             "tsp",
+		"half teaspoon":         "half_tsp",
+		"half teaspoons":        "half_tsp",
+		"1/2 tsp":               "half_tsp",
+		"1/2 teaspoon":          "half_tsp",
+		"1/2 teaspoons":         "half_tsp",
+		"½ tsp":                 "half_tsp",
+		"½ teaspoon":            "half_tsp",
+		"quarter teaspoon":      "qtr_tsp",
+		"quarter teaspoons":     "qtr_tsp",
+		"1/4 tsp":               "qtr_tsp",
+		"1/4 teaspoon":          "qtr_tsp",
+		"1/4 teaspoons":         "qtr_tsp",
+		"¼ tsp":                 "qtr_tsp",
+		"¼ teaspoon":            "qtr_tsp",
+		"eighth teaspoon":       "eighth_tsp",
+		"eighth teaspoons":      "eighth_tsp",
+		"1/8 tsp":               "eighth_tsp",
+		"1/8 teaspoon":          "eighth_tsp",
+		"1/8 teaspoons":         "eighth_tsp",
+		"⅛ tsp":                 "eighth_tsp",
+		"⅛ teaspoon":            "eighth_tsp",
 		"tablespoon":            "tbsp",
 		"tablespoons":           "tbsp",
 		"tbsps":                 "tbsp",
@@ -304,6 +332,18 @@ func ParseUnit(s string) (string, UnitCategory, error) {
 		"fl oz":                 "fl_oz",
 		"floz":                  "fl_oz",
 		"cups":                  "cup",
+		"half cup":              "half_cup",
+		"half cups":             "half_cup",
+		"1/2 cup":               "half_cup",
+		"1/2 cups":              "half_cup",
+		"½ cup":                 "half_cup",
+		"½ cups":                "half_cup",
+		"quarter cup":           "qtr_cup",
+		"quarter cups":          "qtr_cup",
+		"1/4 cup":               "qtr_cup",
+		"1/4 cups":              "qtr_cup",
+		"¼ cup":                 "qtr_cup",
+		"¼ cups":                "qtr_cup",
 		"pint":                  "pt",
 		"pints":                 "pt",
 		"quart":                 "qt",
