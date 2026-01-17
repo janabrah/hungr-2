@@ -142,7 +142,7 @@ body {
   cursor: pointer;
 }
 
-.recipe-select-option[aria-selected="true"] {
+.recipe-select-option[aria-selected='true'] {
   background: var(--border);
 }
 

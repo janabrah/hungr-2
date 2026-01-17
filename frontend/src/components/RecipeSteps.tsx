@@ -1,20 +1,19 @@
-import type { RecipeStepResponse as RecipeStep } from "../types.gen";
+import type { RecipeStepResponse as RecipeStep } from '../types.gen'
 
 type Props = {
-  steps: RecipeStep[];
-};
+  steps: RecipeStep[]
+}
 
 export function RecipeSteps({ steps }: Props) {
   if (steps.length === 0) {
-    return <p className="recipe-steps-empty">No steps available.</p>;
+    return <p className="recipe-steps-empty">No steps available.</p>
   }
 
   // Separate ingredients-only step (empty instruction) from actual steps
-  const firstStep = steps[0];
-  const hasIngredientsStep =
-    firstStep !== undefined && firstStep.instruction === "";
-  const ingredientsStep = hasIngredientsStep ? firstStep : null;
-  const instructionSteps = hasIngredientsStep ? steps.slice(1) : steps;
+  const firstStep = steps[0]
+  const hasIngredientsStep = firstStep !== undefined && firstStep.instruction === ''
+  const ingredientsStep = hasIngredientsStep ? firstStep : null
+  const instructionSteps = hasIngredientsStep ? steps.slice(1) : steps
 
   return (
     <div className="recipe-steps">
@@ -47,5 +46,5 @@ export function RecipeSteps({ steps }: Props) {
         </ol>
       )}
     </div>
-  );
+  )
 }
