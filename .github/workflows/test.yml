@@ -1,4 +1,4 @@
-name: Tests
+name: Tests and linting
 
 on:
   push:
@@ -77,3 +77,6 @@ jobs:
 
       - name: Type check
         run: pnpm build
+
+      - name: Test
+        run: pnpm test
