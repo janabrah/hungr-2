@@ -29,12 +29,13 @@ const extractionRules = `Rules:
 4. Use standard cooking units: tsp, tbsp, cup, oz, lb, g, kg, ml, l
 5. For countable items without units, just use the number and name (e.g., "2 eggs", "1 onion")
 6. Do NOT include temperatures (e.g., "350°F", "180°C") in the ingredients list - temperatures belong in the instruction steps only
-7. IMPORTANT: Preserve ALL numbers in instructions including oven temperatures (e.g., "Preheat oven to 350°F"), cooking times (e.g., "bake for 25 minutes"), and quantities. Never omit or round these values.`
+7. IMPORTANT: Preserve ALL numbers in instructions including oven temperatures (e.g., "Preheat oven to 350°F"), cooking times (e.g., "bake for 25 minutes"), and quantities. Never omit or round these values.
+8. IMPORTANT: Watch for mixed fractions! "3 1/2 cups" means 3.5 cups (three and a half), NOT "3" followed by "1/2 cup". Similarly "2 1/4 tsp" means 2.25 tsp. Convert mixed fractions to decimals.`
 
 const extractImageSystemPrompt = `You are a recipe extraction assistant. Given an image of a recipe (such as a photo from a cookbook, a handwritten recipe card, or a screenshot), extract the recipe steps and ingredients into a structured JSON format.
 
 ` + extractionRules + `
-8. If the image is unclear or partially visible, extract what you can see`
+9. If the image is unclear or partially visible, extract what you can see`
 
 const extractURLSystemPrompt = `You are a recipe extraction assistant. Given the text content of a recipe webpage, extract the recipe steps and ingredients into a structured JSON format.
 
@@ -43,8 +44,8 @@ const extractURLSystemPrompt = `You are a recipe extraction assistant. Given the
 const extractTextSystemPrompt = `You are a recipe extraction assistant. Given raw text that has been copied and pasted from a recipe website (which may be poorly formatted, contain ads, navigation text, or other noise), extract the recipe steps and ingredients into a structured JSON format.
 
 ` + extractionRules + `
-8. Ignore any non-recipe content like ads, navigation, comments, ratings, or author bios
-9. If the text contains multiple recipes, extract only the main/first recipe`
+9. Ignore any non-recipe content like ads, navigation, comments, ratings, or author bios
+10. If the text contains multiple recipes, extract only the main/first recipe`
 
 // Shared JSON schema for recipe steps response
 var recipeStepsSchema = map[string]interface{}{
