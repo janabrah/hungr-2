@@ -53,8 +53,7 @@ describe('RecipeStepsEditor', () => {
 
   // BUG: This test documents a bug where step 0 with empty instruction
   // but containing ingredients gets filtered out on save.
-  // Skipped until the bug is fixed.
-  it.skip('preserves step 0 with empty instruction when it has ingredients', () => {
+  it('preserves step 0 with empty instruction when it has ingredients', () => {
     // Per the project convention (documented in CLAUDE.md):
     // - Step 0 has an empty instruction and contains ALL ingredients
     // - Subsequent steps have instructions but empty ingredient arrays
@@ -96,41 +95,5 @@ describe('RecipeStepsEditor', () => {
     expect(savedSteps[0].instruction).toBe('')
     expect(savedSteps[0].ingredients).toContain('2 cups flour')
     expect(savedSteps[0].ingredients).toContain('1 tsp salt')
-  })
-
-  // BUG: Related to the above - this tests the correct filtering behavior
-  // Skipped until the bug is fixed.
-  it.skip('filters out steps with empty instruction AND no ingredients', () => {
-    // Steps with empty instructions AND no ingredients should be filtered out
-    const initialSteps: RecipeStepResponse[] = [
-      { instruction: '', ingredients: ['2 cups flour'] }, // keep: has ingredients
-      { instruction: '', ingredients: [] }, // filter: empty instruction, no ingredients
-      { instruction: 'Mix everything', ingredients: [] }, // keep: has instruction
-    ]
-
-    let savedSteps: RecipeStepResponse[] = []
-    const mockOnSave = vi.fn((steps: RecipeStepResponse[]): Promise<void> => {
-      savedSteps = steps
-      return Promise.resolve()
-    })
-
-    render(
-      <RecipeStepsEditor
-        steps={initialSteps}
-        onSave={mockOnSave}
-        onCancel={() => {}}
-        saving={false}
-      />,
-    )
-
-    const saveButton = screen.getByRole('button', { name: 'Save' })
-    fireEvent.click(saveButton)
-
-    expect(mockOnSave).toHaveBeenCalled()
-
-    // Should have 2 steps (filtered out the empty one with no ingredients)
-    expect(savedSteps.length).toBe(2)
-    expect(savedSteps[0].ingredients).toContain('2 cups flour')
-    expect(savedSteps[1].instruction).toBe('Mix everything')
   })
 })
