@@ -181,6 +181,43 @@ func TestParseQuantity_Errors(t *testing.T) {
 	}
 }
 
+func TestFindBestIntegerUnit_FractionalUnits(t *testing.T) {
+	// Regression test: fractional units should display as fractional units,
+	// not convert to smaller units (e.g., 1/2 tsp was previously showing as 49 drops)
+	tests := []struct {
+		name         string
+		baseML       float64
+		expectedUnit string
+		expectedVal  float64
+	}{
+		// Fractional teaspoons
+		{"half teaspoon", 2.46446, "half_tsp", 1},
+		{"quarter teaspoon", 1.23223, "qtr_tsp", 1},
+		{"eighth teaspoon", 0.616115, "eighth_tsp", 1},
+		{"two half teaspoons", 4.92892, "tsp", 1},
+		{"two quarter teaspoons", 2.46446, "half_tsp", 1},
+		{"three eighth teaspoons", 1.848345, "eighth_tsp", 3},
+		// Fractional cups
+		{"half cup", 118.294, "half_cup", 1},
+		{"quarter cup", 59.147, "qtr_cup", 1},
+		{"two half cups", 236.588, "cup", 1},
+		{"two quarter cups", 118.294, "half_cup", 1},
+		{"three quarter cups", 177.441, "qtr_cup", 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			q := FindBestIntegerUnit(tt.baseML, CategoryVolume)
+			if q.Unit != tt.expectedUnit {
+				t.Errorf("Unit: got %q, want %q", q.Unit, tt.expectedUnit)
+			}
+			if q.Value != tt.expectedVal {
+				t.Errorf("Value: got %v, want %v", q.Value, tt.expectedVal)
+			}
+		})
+	}
+}
+
 func TestRoundTripIngredientParsing(t *testing.T) {
 	// Test that we can parse formatted output back
 	tests := []struct {
