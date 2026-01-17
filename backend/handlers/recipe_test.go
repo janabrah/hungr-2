@@ -142,7 +142,7 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 
 	writer.Close()
 
-	req := httptest.NewRequest("POST", "/api/recipes?email="+testEmail+"&name=TestRecipe&tagString=dinner,quick", body)
+	req := httptest.NewRequest("POST", "/api/recipes?email="+testEmail+"&name=TestRecipe&tagString=dinner,%20quick", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	w := httptest.NewRecorder()
 
@@ -169,6 +169,26 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 	}
 	if response.Recipe.UUID == uuid.Nil {
 		t.Error("Expected non-nil UUID for recipe")
+	}
+
+	// Verify tags are returned correctly
+	if len(response.Tags) != 2 {
+		t.Errorf("Expected 2 tags, got %d", len(response.Tags))
+	}
+	expectedTags := map[string]bool{"dinner": false, "quick": false}
+	for _, tag := range response.Tags {
+		if _, ok := expectedTags[tag.Name]; !ok {
+			t.Errorf("Unexpected tag %q", tag.Name)
+		}
+		expectedTags[tag.Name] = true
+		if tag.UUID == uuid.Nil {
+			t.Errorf("Tag %q has nil UUID", tag.Name)
+		}
+	}
+	for name, found := range expectedTags {
+		if !found {
+			t.Errorf("Expected tag %q not found", name)
+		}
 	}
 
 	// Cleanup
