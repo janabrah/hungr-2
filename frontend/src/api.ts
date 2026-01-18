@@ -1,18 +1,36 @@
-import type {
-  ConnectionsResponse,
-  User,
-  UserResponse,
-  RecipesResponse,
-  UploadResponse,
-  RecipeStepsResponse,
-  Tag,
-} from './types.gen'
+import type { User, RecipesResponse, UploadResponse, RecipeStepsResponse, Tag } from './types.gen'
 import type { Email, UUID } from './branded'
+import {
+  getErrorMessage,
+  isConnectionsResponse,
+  isRecipeStepsResponse,
+  isRecipesResponse,
+  isTagsResponse,
+  isUploadResponse,
+  isUserResponse,
+} from './guards'
 
 export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
 
 const FETCH_FAILURE_MESSAGE =
   'Unable to reach the API. Check that the backend is running and VITE_API_BASE is correct.'
+
+const readJson = async (response: Response): Promise<unknown> => {
+  const text = await response.text()
+  if (text === '') {
+    return null
+  }
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
+const getErrorFromResponse = async (response: Response, fallback: string): Promise<string> => {
+  const data = await readJson(response)
+  return getErrorMessage(data) ?? fallback
+}
 
 export function getFriendlyErrorMessage(err: unknown, fallback: string): string {
   const message = err instanceof Error ? err.message : fallback
@@ -39,7 +57,11 @@ export async function getRecipes(email: Email): Promise<RecipesResponse> {
   if (!response.ok) {
     throw new Error(`Failed to fetch recipes: ${response.status.toString()}`)
   }
-  return response.json() as Promise<RecipesResponse>
+  const data = await readJson(response)
+  if (!isRecipesResponse(data)) {
+    throw new Error('Unexpected recipes response from server.')
+  }
+  return data
 }
 
 export async function createRecipe(
@@ -67,7 +89,11 @@ export async function createRecipe(
   if (!response.ok) {
     throw new Error(`Failed to create recipe: ${response.status.toString()}`)
   }
-  return response.json() as Promise<UploadResponse>
+  const data = await readJson(response)
+  if (!isUploadResponse(data)) {
+    throw new Error('Unexpected create recipe response from server.')
+  }
+  return data
 }
 
 export async function deleteRecipe(recipeUUID: UUID): Promise<void> {
@@ -88,10 +114,11 @@ export async function patchRecipe(recipeUUID: UUID, tagString: string): Promise<
   })
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to update recipe: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to update recipe: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
 }
 
@@ -100,7 +127,11 @@ export async function getRecipeSteps(recipeUUID: UUID): Promise<RecipeStepsRespo
   if (!response.ok) {
     throw new Error(`Failed to fetch recipe steps: ${response.status.toString()}`)
   }
-  return response.json() as Promise<RecipeStepsResponse>
+  const data = await readJson(response)
+  if (!isRecipeStepsResponse(data)) {
+    throw new Error('Unexpected recipe steps response from server.')
+  }
+  return data
 }
 
 export async function updateRecipeSteps(
@@ -113,10 +144,11 @@ export async function updateRecipeSteps(
     body: JSON.stringify({ steps }),
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to update recipe steps: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to update recipe steps: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
 }
 
@@ -127,12 +159,17 @@ export async function extractRecipeFromURL(url: string): Promise<RecipeStepsResp
     body: JSON.stringify({ url }),
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to extract recipe: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to extract recipe: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
-  return response.json() as Promise<RecipeStepsResponse>
+  const data = await readJson(response)
+  if (!isRecipeStepsResponse(data)) {
+    throw new Error('Unexpected extract recipe response from server.')
+  }
+  return data
 }
 
 export async function extractRecipeFromImages(files: File[]): Promise<RecipeStepsResponse> {
@@ -146,14 +183,17 @@ export async function extractRecipeFromImages(files: File[]): Promise<RecipeStep
     body: formData,
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(
-      data.error ?? `Failed to extract recipe from image: ${response.status.toString()}`,
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to extract recipe from image: ${response.status.toString()}`,
     )
+    throw new Error(message)
   }
-  return response.json() as Promise<RecipeStepsResponse>
+  const data = await readJson(response)
+  if (!isRecipeStepsResponse(data)) {
+    throw new Error('Unexpected extract recipe image response from server.')
+  }
+  return data
 }
 
 export async function extractRecipeFromText(text: string): Promise<RecipeStepsResponse> {
@@ -163,14 +203,17 @@ export async function extractRecipeFromText(text: string): Promise<RecipeStepsRe
     body: JSON.stringify({ text }),
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(
-      data.error ?? `Failed to extract recipe from text: ${response.status.toString()}`,
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to extract recipe from text: ${response.status.toString()}`,
     )
+    throw new Error(message)
   }
-  return response.json() as Promise<RecipeStepsResponse>
+  const data = await readJson(response)
+  if (!isRecipeStepsResponse(data)) {
+    throw new Error('Unexpected extract recipe text response from server.')
+  }
+  return data
 }
 
 export async function getTags(): Promise<Tag[]> {
@@ -178,19 +221,26 @@ export async function getTags(): Promise<Tag[]> {
   if (!response.ok) {
     throw new Error(`Failed to fetch tags: ${response.status.toString()}`)
   }
-  const data = (await response.json()) as { tags: Tag[] }
+  const data = await readJson(response)
+  if (!isTagsResponse(data)) {
+    throw new Error('Unexpected tags response from server.')
+  }
   return data.tags
 }
 
 export async function getUserByEmail(email: Email): Promise<User> {
   const response = await fetch(`${API_BASE}/api/users?email=${encodeURIComponent(email)}`)
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to fetch user: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to fetch user: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
-  const data = (await response.json()) as UserResponse
+  const data = await readJson(response)
+  if (!isUserResponse(data)) {
+    throw new Error('Unexpected user response from server.')
+  }
   return data.user
 }
 
@@ -201,12 +251,16 @@ export async function getConnections(
   const params = new URLSearchParams({ user_uuid: userUUID, direction })
   const response = await fetch(`${API_BASE}/api/connections?${params.toString()}`)
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to fetch connections: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to fetch connections: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
-  const data = (await response.json()) as ConnectionsResponse
+  const data = await readJson(response)
+  if (!isConnectionsResponse(data)) {
+    throw new Error('Unexpected connections response from server.')
+  }
   return data.connections
 }
 
@@ -217,10 +271,11 @@ export async function createConnection(email: Email, targetUserUUID: UUID): Prom
     body: JSON.stringify({ target_user_uuid: targetUserUUID }),
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to create connection: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to create connection: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
 }
 
@@ -240,9 +295,10 @@ export async function deleteConnection(
     method: 'DELETE',
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as {
-      error?: string
-    }
-    throw new Error(data.error ?? `Failed to delete connection: ${response.status.toString()}`)
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to delete connection: ${response.status.toString()}`,
+    )
+    throw new Error(message)
   }
 }

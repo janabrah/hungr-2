@@ -62,7 +62,10 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       newFiles.forEach((file) => {
         const reader = new FileReader()
         reader.onload = (e) => {
-          setImagePreviews((prev) => [...prev, e.target?.result as string])
+          const result = e.target?.result
+          if (typeof result === 'string') {
+            setImagePreviews((prev) => [...prev, result])
+          }
         }
         reader.readAsDataURL(file)
       })
