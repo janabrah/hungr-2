@@ -11,7 +11,7 @@ import (
 func TestCreateStepIngredientWithUnit(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("ingredient-unit-test", testEmail, "test")
+	recipe, err := InsertRecipeByEmail("ingredient-unit-test", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestCreateStepIngredientWithUnit(t *testing.T) {
 func TestCreateStepIngredientWithUnit_InvalidUnit(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("invalid-unit-test", testEmail, "test")
+	recipe, err := InsertRecipeByEmail("invalid-unit-test", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestCreateStepIngredientWithUnit_InvalidUnit(t *testing.T) {
 func TestComplexRecipeWithIngredients(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("complex-recipe-test", testEmail, "baking, dessert")
+	recipe, err := InsertRecipeByEmail("complex-recipe-test", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
