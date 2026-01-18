@@ -26,7 +26,7 @@ func main() {
 
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/api/recipes", middleware.RequestLogger(middleware.CORS(handleRecipes, "GET, POST, DELETE, OPTIONS")))
-	http.HandleFunc("/api/recipes/", middleware.RequestLogger(middleware.CORS(handleRecipeSubresources, "GET, PUT, OPTIONS")))
+	http.HandleFunc("/api/recipes/", middleware.RequestLogger(middleware.CORS(handleRecipeSubresources, "GET, PUT, PATCH, OPTIONS")))
 	http.HandleFunc("/api/files/", middleware.RequestLogger(middleware.CORS(handleFiles, "GET")))
 	http.HandleFunc("/api/users", middleware.RequestLogger(middleware.CORS(handleUsers, "GET, POST, PUT, DELETE, OPTIONS")))
 	http.HandleFunc("/api/auth/login", middleware.RequestLogger(middleware.CORS(handleLogin, "POST, OPTIONS")))
@@ -72,6 +72,8 @@ func handleRecipeSubresources(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	} else if r.Method == "PATCH" {
+		handlers.PatchRecipe(w, r)
 	} else {
 		http.Error(w, "Not found", http.StatusNotFound)
 	}

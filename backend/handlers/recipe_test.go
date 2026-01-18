@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cobyabrahams/hungr/logger"
@@ -545,5 +546,307 @@ func TestUpdateRecipeSteps_RoundTrip(t *testing.T) {
 	}
 	if len(stepsResp.Steps[2].Ingredients) != 3 {
 		t.Errorf("Step 3 should have 3 ingredients, got %d", len(stepsResp.Steps[2].Ingredients))
+	}
+}
+
+func TestPatchRecipe_MissingUUID(t *testing.T) {
+	body := `{"tagString": "test"}`
+	req := httptest.NewRequest("PATCH", "/api/recipes/", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	PatchRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestPatchRecipe_InvalidUUID(t *testing.T) {
+	body := `{"tagString": "test"}`
+	req := httptest.NewRequest("PATCH", "/api/recipes/not-a-uuid", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	PatchRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestPatchRecipe_RecipeNotFound(t *testing.T) {
+	body := `{"tagString": "test"}`
+	req := httptest.NewRequest("PATCH", "/api/recipes/00000000-0000-0000-0000-000000000001", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	PatchRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestPatchRecipe_InvalidBody(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("patch-invalid-body-test", testEmail)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	body := `{invalid json`
+	req := httptest.NewRequest("PATCH", "/api/recipes/"+recipe.UUID.String(), strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	PatchRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+// Helper to create a recipe with tags for patch tests
+func createRecipeWithTags(t *testing.T, name, tagString string) models.UploadResponse {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.Close()
+
+	url := "/api/recipes?email=" + testEmail + "&name=" + name
+	if tagString != "" {
+		url += "&tagString=" + strings.ReplaceAll(tagString, " ", "%20")
+	}
+	createReq := httptest.NewRequest("POST", url, body)
+	createReq.Header.Set("Content-Type", writer.FormDataContentType())
+	createW := httptest.NewRecorder()
+
+	CreateRecipe(createW, createReq)
+
+	createResp := createW.Result()
+	defer createResp.Body.Close()
+
+	var response models.UploadResponse
+	if err := json.NewDecoder(createResp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode create response: %v", err)
+	}
+	return response
+}
+
+func TestPatchRecipe_SameTags(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create recipe with tags
+	createResp := createRecipeWithTags(t, "PatchSameTagsTest", "alpha, beta, gamma")
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Patch with identical tags
+	patchBody := `{"tagString": "alpha, beta, gamma"}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+createResp.Recipe.UUID.String(), strings.NewReader(patchBody))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	patchResp := patchW.Result()
+	defer patchResp.Body.Close()
+
+	if patchResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(patchResp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", patchResp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify tags unchanged
+	updatedRecipe, err := storage.GetRecipeByUUID(createResp.Recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.TagString != "alpha, beta, gamma" {
+		t.Errorf("Expected tag_string 'alpha, beta, gamma', got %q", updatedRecipe.TagString)
+	}
+}
+
+func TestPatchRecipe_SubsetDifferentOrder(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create recipe with tags
+	createResp := createRecipeWithTags(t, "PatchSubsetTest", "alpha, beta, gamma")
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Patch with subset in different order
+	patchBody := `{"tagString": "gamma, alpha"}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+createResp.Recipe.UUID.String(), strings.NewReader(patchBody))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	patchResp := patchW.Result()
+	defer patchResp.Body.Close()
+
+	if patchResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(patchResp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", patchResp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify only subset tags in new order
+	updatedRecipe, err := storage.GetRecipeByUUID(createResp.Recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.TagString != "gamma, alpha" {
+		t.Errorf("Expected tag_string 'gamma, alpha', got %q", updatedRecipe.TagString)
+	}
+}
+
+func TestPatchRecipe_Superset(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create recipe with tags
+	createResp := createRecipeWithTags(t, "PatchSupersetTest", "alpha, beta")
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Patch with superset
+	patchBody := `{"tagString": "alpha, beta, gamma, delta"}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+createResp.Recipe.UUID.String(), strings.NewReader(patchBody))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	patchResp := patchW.Result()
+	defer patchResp.Body.Close()
+
+	if patchResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(patchResp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", patchResp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify all tags present
+	updatedRecipe, err := storage.GetRecipeByUUID(createResp.Recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.TagString != "alpha, beta, gamma, delta" {
+		t.Errorf("Expected tag_string 'alpha, beta, gamma, delta', got %q", updatedRecipe.TagString)
+	}
+}
+
+func TestPatchRecipe_MixedNewAndOld(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create recipe with tags
+	createResp := createRecipeWithTags(t, "PatchMixedTest", "alpha, beta, gamma")
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Patch with mix of old and new tags
+	patchBody := `{"tagString": "beta, delta, epsilon"}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+createResp.Recipe.UUID.String(), strings.NewReader(patchBody))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	patchResp := patchW.Result()
+	defer patchResp.Body.Close()
+
+	if patchResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(patchResp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", patchResp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify mixed tags
+	updatedRecipe, err := storage.GetRecipeByUUID(createResp.Recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.TagString != "beta, delta, epsilon" {
+		t.Errorf("Expected tag_string 'beta, delta, epsilon', got %q", updatedRecipe.TagString)
+	}
+}
+
+func TestPatchRecipe_NewTagNotInTable(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create recipe with existing tag
+	createResp := createRecipeWithTags(t, "PatchNewTagTest", "existing-tag")
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Patch with a completely new tag that doesn't exist in tags table
+	patchBody := `{"tagString": "brand-new-unique-tag-12345"}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+createResp.Recipe.UUID.String(), strings.NewReader(patchBody))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	patchResp := patchW.Result()
+	defer patchResp.Body.Close()
+
+	if patchResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(patchResp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", patchResp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify new tag was created and assigned
+	updatedRecipe, err := storage.GetRecipeByUUID(createResp.Recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.TagString != "brand-new-unique-tag-12345" {
+		t.Errorf("Expected tag_string 'brand-new-unique-tag-12345', got %q", updatedRecipe.TagString)
+	}
+}
+
+func TestPatchRecipe_ClearTags(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create recipe with tags
+	createResp := createRecipeWithTags(t, "PatchClearTagsTest", "breakfast, lunch")
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Patch with empty tag string to clear tags
+	patchBody := `{"tagString": ""}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+createResp.Recipe.UUID.String(), strings.NewReader(patchBody))
+	patchReq.Header.Set("Content-Type", "application/json")
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	patchResp := patchW.Result()
+	defer patchResp.Body.Close()
+
+	if patchResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(patchResp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", patchResp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify tags were cleared
+	updatedRecipe, err := storage.GetRecipeByUUID(createResp.Recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.TagString != "" {
+		t.Errorf("Expected empty tag_string, got %q", updatedRecipe.TagString)
 	}
 }
