@@ -79,9 +79,9 @@ var recipeStepsSchema = map[string]interface{}{
 }
 
 type openAIRequest struct {
-	Model          string           `json:"model"`
-	Messages       []openAIMessage  `json:"messages"`
-	ResponseFormat *responseFormat  `json:"response_format,omitempty"`
+	Model          string          `json:"model"`
+	Messages       []openAIMessage `json:"messages"`
+	ResponseFormat *responseFormat `json:"response_format,omitempty"`
 }
 
 type responseFormat struct {

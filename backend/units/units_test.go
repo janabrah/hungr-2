@@ -103,10 +103,10 @@ func TestParseIngredientString_Errors(t *testing.T) {
 
 func TestParseIngredientString_NoQuantity(t *testing.T) {
 	tests := []struct {
-		input          string
-		expectedName   string
-		expectedQty    float64
-		expectedUnit   string
+		input        string
+		expectedName string
+		expectedQty  float64
+		expectedUnit string
 	}{
 		{"flour", "flour", 1, "count"},
 		{"salt to taste", "salt to taste", 1, "count"},
