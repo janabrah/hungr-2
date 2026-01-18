@@ -148,7 +148,7 @@ func main() {
 	}
 
 	for _, r := range recipes {
-		recipe, err := storage.InsertRecipeByEmail(r.name, testUserEmail, r.tags)
+		recipe, err := storage.InsertRecipeByEmail(r.name, testUserEmail)
 		if err != nil {
 			log.Printf("Failed to insert recipe %q: %v", r.name, err)
 			continue

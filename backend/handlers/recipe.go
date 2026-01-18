@@ -114,12 +114,13 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(ctx)
 
-	recipe, err := storage.TxInsertRecipeByEmail(ctx, tx, name, email, tagString)
+	recipe, err := storage.TxInsertRecipeByEmail(ctx, tx, name, email)
 	if err != nil {
 		logger.Error(ctx, "failed to insert recipe", err, "email", email, "name", name)
 		respondWithError(w, http.StatusInternalServerError, "failed to create recipe - user may not exist")
 		return
 	}
+	recipe.TagString = tagString
 
 	logger.Info(ctx, "recipe created", "recipe_uuid", recipe.UUID, "email", email)
 

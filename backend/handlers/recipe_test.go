@@ -324,7 +324,7 @@ func TestUpdateRecipeSteps_InvalidIngredient(t *testing.T) {
 	ensureTestUser(t)
 
 	// Create a recipe first
-	recipe, err := storage.InsertRecipeByEmail("steps-invalid-ing-test", testEmail, "test")
+	recipe, err := storage.InsertRecipeByEmail("steps-invalid-ing-test", testEmail)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestUpdateRecipeSteps_ValidRequest(t *testing.T) {
 	ensureTestUser(t)
 
 	// Create a recipe first
-	recipe, err := storage.InsertRecipeByEmail("steps-valid-test", testEmail, "test")
+	recipe, err := storage.InsertRecipeByEmail("steps-valid-test", testEmail)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -462,7 +462,7 @@ func TestUpdateRecipeSteps_RoundTrip(t *testing.T) {
 	ensureTestUser(t)
 
 	// Create a recipe
-	recipe, err := storage.InsertRecipeByEmail("steps-roundtrip-test", testEmail, "test")
+	recipe, err := storage.InsertRecipeByEmail("steps-roundtrip-test", testEmail)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}

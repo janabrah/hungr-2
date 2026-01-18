@@ -80,7 +80,7 @@ func TestGetRecipesByUserEmail(t *testing.T) {
 func TestInsertRecipeByEmail(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("test-recipe", testEmail, "test, tags")
+	recipe, err := InsertRecipeByEmail("test-recipe", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -99,7 +99,7 @@ func TestInsertRecipeByEmail(t *testing.T) {
 func TestInsertAndGetFile(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("file-test", testEmail, "test")
+	recipe, err := InsertRecipeByEmail("file-test", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestUpsertTag(t *testing.T) {
 func TestMultipleFilesPerRecipe(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("multi-file-test", testEmail, "test")
+	recipe, err := InsertRecipeByEmail("multi-file-test", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestMultipleFilesPerRecipe(t *testing.T) {
 func TestDeleteRecipe(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("delete-test", testEmail, "test")
+	recipe, err := InsertRecipeByEmail("delete-test", testEmail)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -236,7 +236,7 @@ func TestTransactionCommit(t *testing.T) {
 	}
 
 	// Insert recipe in transaction
-	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-commit-test", testEmail, "transaction, test")
+	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-commit-test", testEmail)
 	if err != nil {
 		tx.Rollback(ctx)
 		t.Fatalf("TxInsertRecipeByEmail failed: %v", err)
@@ -301,7 +301,7 @@ func TestTransactionRollback(t *testing.T) {
 	}
 
 	// Insert recipe in transaction
-	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-rollback-test", testEmail, "rollback, test")
+	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-rollback-test", testEmail)
 	if err != nil {
 		tx.Rollback(ctx)
 		t.Fatalf("TxInsertRecipeByEmail failed: %v", err)

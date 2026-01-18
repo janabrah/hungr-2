@@ -10,7 +10,7 @@ import (
 const (
 	queryGetRecipeByUUID = `
 		SELECT r.uuid, r.name, r.user_uuid,
-		       COALESCE(STRING_AGG(t.name, ', '), '') as tag_string,
+		       COALESCE(STRING_AGG(t.name, ', ' ORDER BY rt.id), '') as tag_string,
 		       r.created_at, u.email
 		FROM recipes r
 		JOIN users u ON r.user_uuid = u.uuid
@@ -24,7 +24,7 @@ const (
 			SELECT uuid FROM users WHERE email = $1
 		)
 		SELECT r.uuid, r.name, r.user_uuid,
-		       COALESCE(STRING_AGG(t.name, ', '), '') as tag_string,
+		       COALESCE(STRING_AGG(t.name, ', ' ORDER BY rt.id), '') as tag_string,
 		       r.created_at, u.email
 		FROM recipes r
 		JOIN users u ON r.user_uuid = u.uuid
@@ -41,10 +41,10 @@ const (
 		ORDER BY r.created_at DESC LIMIT 100`
 
 	queryInsertRecipeByEmail = `
-		INSERT INTO recipes (name, user_uuid, tag_string)
-		SELECT $1, u.uuid, $2
-		FROM users u WHERE u.email = $3
-		RETURNING uuid, name, user_uuid, tag_string, created_at, $3 as owner_email`
+		INSERT INTO recipes (name, user_uuid)
+		SELECT $1, u.uuid
+		FROM users u WHERE u.email = $2
+		RETURNING uuid, name, user_uuid, '' as tag_string, created_at, $2 as owner_email`
 
 	queryDeleteRecipeTags = `DELETE FROM recipe_tags WHERE recipe_uuid = $1`
 	queryDeleteRecipeFiles = `DELETE FROM files WHERE recipe_uuid = $1`
@@ -79,10 +79,10 @@ func GetRecipesByUserEmail(email string) ([]models.Recipe, error) {
 	return recipes, rows.Err()
 }
 
-func InsertRecipeByEmail(name string, email string, tagString string) (*models.Recipe, error) {
+func InsertRecipeByEmail(name string, email string) (*models.Recipe, error) {
 	var r models.Recipe
 	err := db.QueryRow(context.Background(), queryInsertRecipeByEmail,
-		name, tagString, email).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt, &r.OwnerEmail)
+		name, email).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt, &r.OwnerEmail)
 	if err != nil {
 		return nil, err
 	}
@@ -90,10 +90,10 @@ func InsertRecipeByEmail(name string, email string, tagString string) (*models.R
 }
 
 // TxInsertRecipeByEmail inserts a recipe within a transaction
-func TxInsertRecipeByEmail(ctx context.Context, tx *Tx, name string, email string, tagString string) (*models.Recipe, error) {
+func TxInsertRecipeByEmail(ctx context.Context, tx *Tx, name string, email string) (*models.Recipe, error) {
 	var r models.Recipe
 	err := tx.tx.QueryRow(ctx, queryInsertRecipeByEmail,
-		name, tagString, email).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt, &r.OwnerEmail)
+		name, email).Scan(&r.UUID, &r.Name, &r.User, &r.TagString, &r.CreatedAt, &r.OwnerEmail)
 	if err != nil {
 		return nil, err
 	}
