@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { getRecipes, getFriendlyErrorMessage } from '../api'
 import type { Email } from '../branded'
 import type { File, Recipe } from '../types.gen'
@@ -13,7 +13,8 @@ type Params = {
 }
 
 export function useRecipesWithFiles({ email, setRecipes, setLoading, setError }: Params) {
-  useEffect(() => {
+  const refetch = useCallback(() => {
+    setLoading(true)
     getRecipes(email)
       .then((response) => {
         const fileData = response.fileData
@@ -32,4 +33,10 @@ export function useRecipesWithFiles({ email, setRecipes, setLoading, setError }:
         setLoading(false)
       })
   }, [email, setError, setLoading, setRecipes])
+
+  useEffect(() => {
+    refetch()
+  }, [refetch])
+
+  return { refetch }
 }

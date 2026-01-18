@@ -48,14 +48,14 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
   const [steps, setSteps] = useState<RecipeStep[]>([])
   const [loadingSteps, setLoadingSteps] = useState(false)
 
-  useRecipesWithFiles({ email, setRecipes, setLoading, setError })
+  const { refetch } = useRecipesWithFiles({ email, setRecipes, setLoading, setError })
 
   useRecipeSteps({ selectedRecipeId, setSteps, setLoadingSteps })
 
   const handleSaveSteps = async (newSteps: RecipeStep[]) => {
     try {
       await updateRecipeSteps(asUUID(selectedRecipeId), newSteps)
-      setSteps(newSteps)
+      refetch()
     } catch (err: unknown) {
       setError(getFriendlyErrorMessage(err, 'Failed to save steps'))
     }
@@ -64,9 +64,7 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
   const handleSaveTags = async (newTags: string) => {
     try {
       await patchRecipe(asUUID(selectedRecipeId), newTags)
-      setRecipes((prev) =>
-        prev.map((r) => (r.uuid === selectedRecipeId ? { ...r, tag_string: newTags } : r)),
-      )
+      refetch()
     } catch (err: unknown) {
       setError(getFriendlyErrorMessage(err, 'Failed to save tags'))
     }
@@ -98,9 +96,9 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
     setDeleting(true)
     deleteRecipe(asUUID(selectedRecipeId))
       .then(() => {
-        setRecipes((prev) => prev.filter((r) => r.uuid !== selectedRecipeId))
         setSelectedRecipeId('')
         setParams(tagFilter, '')
+        refetch()
       })
       .catch((err: unknown) => {
         setError(getFriendlyErrorMessage(err, 'Failed to delete recipe'))
