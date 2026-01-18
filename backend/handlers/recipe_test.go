@@ -392,6 +392,72 @@ func TestUpdateRecipeSteps_ValidRequest(t *testing.T) {
 	}
 }
 
+func TestCreateRecipe_TagStringRoundTrip(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create a recipe with tags
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/recipes?email="+testEmail+"&name=TagRoundTripTest&tagString=breakfast,%20easy,%20cereal", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	CreateRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Create failed: status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var createResp models.UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&createResp); err != nil {
+		t.Fatalf("Failed to decode create response: %v", err)
+	}
+	defer storage.DeleteRecipe(createResp.Recipe.UUID)
+
+	// Fetch recipes via GetRecipes and verify tag_string is computed correctly
+	getReq := httptest.NewRequest("GET", "/api/recipes?email="+testEmail, nil)
+	getW := httptest.NewRecorder()
+
+	GetRecipes(getW, getReq)
+
+	getResp := getW.Result()
+	defer getResp.Body.Close()
+
+	if getResp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(getResp.Body)
+		t.Fatalf("GetRecipes failed: status %d: %s", getResp.StatusCode, string(bodyBytes))
+	}
+
+	var recipesResp models.RecipesResponse
+	if err := json.NewDecoder(getResp.Body).Decode(&recipesResp); err != nil {
+		t.Fatalf("Failed to decode recipes response: %v", err)
+	}
+
+	// Find our recipe in the response
+	var foundRecipe *models.Recipe
+	for i := range recipesResp.RecipeData {
+		if recipesResp.RecipeData[i].UUID == createResp.Recipe.UUID {
+			foundRecipe = &recipesResp.RecipeData[i]
+			break
+		}
+	}
+
+	if foundRecipe == nil {
+		t.Fatal("Created recipe not found in GetRecipes response")
+	}
+
+	// Verify tag_string matches the order tags were provided
+	if foundRecipe.TagString != "breakfast, easy, cereal" {
+		t.Errorf("Expected tag_string 'breakfast, easy', got %q", foundRecipe.TagString)
+	}
+}
+
 func TestUpdateRecipeSteps_RoundTrip(t *testing.T) {
 	ensureTestUser(t)
 
