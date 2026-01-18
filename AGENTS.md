@@ -20,6 +20,9 @@
   - `npm run lint` runs ESLint.
   - `npx playwright test` runs E2E tests in `frontend/e2e/`.
 
+## Full Repo Checks
+- After completing edits, run the root script: `./run-all.sh` (using `bash run-all.sh`).
+
 ## Coding Style & Naming Conventions
 - Go code is formatted with `gofmt`; keep handler logic in `handlers/` and DB access in `storage/`.
 - TypeScript uses `.tsx` for components; prefer PascalCase for component files (e.g., `RecipeSteps.tsx`).
