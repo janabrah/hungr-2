@@ -7,6 +7,7 @@ import type {
   User,
   UserResponse,
 } from './types.gen'
+import type { FileUploadResponse } from './types'
 
 export type UnknownRecord = Record<string, unknown>
 
@@ -65,6 +66,12 @@ export const isUploadResponse = (value: unknown): value is UploadResponse =>
   isRecipe(value['recipe']) &&
   Array.isArray(value['tags']) &&
   value['tags'].every(isTag)
+
+export const isFileUploadResponse = (value: unknown): value is FileUploadResponse =>
+  isRecord(value) &&
+  isBoolean(value['success']) &&
+  Array.isArray(value['files']) &&
+  value['files'].every(isFile)
 
 export const isRecipeStepsResponse = (value: unknown): value is RecipeStepsResponse =>
   isRecord(value) && Array.isArray(value['steps']) && value['steps'].every(isRecipeStepResponse)
