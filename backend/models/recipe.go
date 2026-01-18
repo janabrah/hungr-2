@@ -46,6 +46,11 @@ type UploadResponse struct {
 	Tags    []Tag  `json:"tags"`
 }
 
+type FileUploadResponse struct {
+	Success bool   `json:"success"`
+	Files   []File `json:"files"`
+}
+
 type TagsResponse struct {
 	Tags []Tag `json:"tags"`
 }
