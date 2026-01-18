@@ -1,30 +1,23 @@
 import { useState } from 'react'
-import {
-  getFileURL,
-  deleteRecipe,
-  updateRecipeSteps,
-  patchRecipe,
-  getFriendlyErrorMessage,
-} from '../api'
-import { Button } from '../components/Button'
+import { deleteRecipe, updateRecipeSteps, patchRecipe, getFriendlyErrorMessage } from '../api'
 import { Header } from '../components/Header'
-import { Icon } from '../types'
-import { RecipeSteps } from '../components/RecipeSteps'
-import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
 import { RecipeSelect } from '../components/RecipeSelect'
-import { TagEditor } from '../components/TagEditor'
 import { TagFilter } from '../components/TagFilter'
 import type { RecipeStepResponse as RecipeStep } from '../types.gen'
-import { asUUID, type Email } from '../branded'
-import type { Page } from '../types'
+import { asUUID } from '../branded'
 import { useRecipeSteps } from '../hooks/useRecipeSteps'
 import { useRecipesWithFiles, type RecipeWithFiles } from '../hooks/useRecipesWithFiles'
-
-type Props = {
-  email: Email
-  currentPage: Page
-  onNavigate: (page: Page) => void
-}
+import {
+  FilterRow,
+  BrowseLayout,
+  RecipeListSection,
+  SelectedRecipeSection,
+  RecipeHeader,
+  RecipeImages,
+  RecipeTagsSection,
+  RecipeStepsSection,
+  type BrowseProps,
+} from '../components/Browse'
 
 function getParams(): { tags: string[]; recipe: string } {
   const params = new URLSearchParams(window.location.search)
@@ -44,7 +37,7 @@ function setParams(tags: string[], recipe: string) {
   window.history.replaceState(null, '', url)
 }
 
-export function Browse({ email, currentPage, onNavigate }: Props) {
+export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
   const initialParams = getParams()
   const [recipes, setRecipes] = useState<RecipeWithFiles[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,46 +47,28 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [steps, setSteps] = useState<RecipeStep[]>([])
   const [loadingSteps, setLoadingSteps] = useState(false)
-  const [editingSteps, setEditingSteps] = useState(false)
-  const [savingSteps, setSavingSteps] = useState(false)
-  const [editingTags, setEditingTags] = useState(false)
-  const [savingTags, setSavingTags] = useState(false)
 
   useRecipesWithFiles({ email, setRecipes, setLoading, setError })
 
-  useRecipeSteps({
-    selectedRecipeId,
-    setSteps,
-    setLoadingSteps,
-    setEditingSteps,
-    setEditingTags,
-  })
+  useRecipeSteps({ selectedRecipeId, setSteps, setLoadingSteps })
 
   const handleSaveSteps = async (newSteps: RecipeStep[]) => {
-    setSavingSteps(true)
     try {
       await updateRecipeSteps(asUUID(selectedRecipeId), newSteps)
       setSteps(newSteps)
-      setEditingSteps(false)
     } catch (err: unknown) {
       setError(getFriendlyErrorMessage(err, 'Failed to save steps'))
-    } finally {
-      setSavingSteps(false)
     }
   }
 
   const handleSaveTags = async (newTags: string) => {
-    setSavingTags(true)
     try {
       await patchRecipe(asUUID(selectedRecipeId), newTags)
       setRecipes((prev) =>
         prev.map((r) => (r.uuid === selectedRecipeId ? { ...r, tag_string: newTags } : r)),
       )
-      setEditingTags(false)
     } catch (err: unknown) {
       setError(getFriendlyErrorMessage(err, 'Failed to save tags'))
-    } finally {
-      setSavingTags(false)
     }
   }
 
@@ -138,110 +113,46 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   return (
     <>
       <Header email={email} currentPage={currentPage} onNavigate={onNavigate} />
-      <div className="container">
+      <BrowseLayout>
         <h1>Browse Recipes</h1>
 
         {error !== null && <p className="error">{error}</p>}
 
-        <div className="flex-row" style={{ marginBottom: '1rem' }}>
+        <FilterRow>
           <TagFilter value={tagFilter} onChange={handleTagFilterChange} />
-        </div>
+        </FilterRow>
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <RecipeSelect
-            recipes={filteredRecipes}
-            selectedRecipeId={selectedRecipeId}
-            onSelect={handleRecipeSelect}
-            viewerEmail={email}
-          />
-        )}
+        <RecipeListSection>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <RecipeSelect
+              recipes={filteredRecipes}
+              selectedRecipeId={selectedRecipeId}
+              onSelect={handleRecipeSelect}
+              viewerEmail={email}
+            />
+          )}
+        </RecipeListSection>
 
         {selectedRecipe !== null && (
-          <div style={{ marginTop: '2rem' }}>
-            <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
-              <h2 style={{ margin: 0 }}>{selectedRecipe.name}</h2>
-              <Button
-                variant="danger"
-                onClick={handleDelete}
-                disabled={deleting}
-                icon={Icon.Trash}
-                showText={false}
-                aria-label={deleting ? 'Deleting recipe' : 'Delete recipe'}
-              >
-                {deleting ? 'Deleting...' : 'Delete'}
-              </Button>
-            </div>
-            {editingTags ? (
-              <TagEditor
-                initialTags={selectedRecipe.tag_string}
-                onSave={handleSaveTags}
-                onCancel={() => {
-                  setEditingTags(false)
-                }}
-                saving={savingTags}
-              />
-            ) : (
-              <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
-                <p style={{ margin: 0 }}>Tags: {selectedRecipe.tag_string || 'None'}</p>
-                <Button
-                  onClick={() => {
-                    setEditingTags(true)
-                  }}
-                  variant="secondary"
-                  icon={Icon.Pencil}
-                  showText={false}
-                  aria-label="Edit tags"
-                >
-                  Edit
-                </Button>
-              </div>
-            )}
-            <div
-              className="flex-row"
-              style={{ alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}
-            >
-              <h3 style={{ margin: 0 }}>Steps</h3>
-              {!editingSteps && !loadingSteps && (
-                <Button
-                  onClick={() => {
-                    setEditingSteps(true)
-                  }}
-                  variant="secondary"
-                  icon={Icon.Pencil}
-                  showText={false}
-                  aria-label="Edit steps"
-                >
-                  Edit
-                </Button>
-              )}
-            </div>
-            {loadingSteps ? (
-              <p>Loading steps...</p>
-            ) : editingSteps ? (
-              <RecipeStepsEditor
-                steps={steps}
-                onSave={handleSaveSteps}
-                onCancel={() => {
-                  setEditingSteps(false)
-                }}
-                saving={savingSteps}
-              />
-            ) : (
-              <RecipeSteps steps={steps} />
-            )}
-            {selectedRecipe.files.map((file) => (
-              <img
-                key={file.uuid}
-                src={getFileURL(file.url)}
-                alt={`${selectedRecipe.name} page ${String(file.page_number + 1)}`}
-                className="recipe-image"
-              />
-            ))}
-          </div>
+          <SelectedRecipeSection>
+            <RecipeHeader name={selectedRecipe.name} deleting={deleting} onDelete={handleDelete} />
+            <RecipeTagsSection
+              key={`tags-${selectedRecipe.uuid}`}
+              tags={selectedRecipe.tag_string}
+              onSave={handleSaveTags}
+            />
+            <RecipeStepsSection
+              key={`steps-${selectedRecipe.uuid}`}
+              steps={steps}
+              loading={loadingSteps}
+              onSave={handleSaveSteps}
+            />
+            <RecipeImages name={selectedRecipe.name} files={selectedRecipe.files} />
+          </SelectedRecipeSection>
         )}
-      </div>
+      </BrowseLayout>
     </>
   )
 }

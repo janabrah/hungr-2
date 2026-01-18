@@ -7,27 +7,16 @@ type Params = {
   selectedRecipeId: string
   setSteps: (steps: RecipeStep[]) => void
   setLoadingSteps: (loading: boolean) => void
-  setEditingSteps: (editing: boolean) => void
-  setEditingTags: (editing: boolean) => void
 }
 
-export function useRecipeSteps({
-  selectedRecipeId,
-  setSteps,
-  setLoadingSteps,
-  setEditingSteps,
-  setEditingTags,
-}: Params) {
+export function useRecipeSteps({ selectedRecipeId, setSteps, setLoadingSteps }: Params) {
   useEffect(() => {
     if (selectedRecipeId === '') {
       setSteps([])
-      setEditingSteps(false)
-      setEditingTags(false)
+      setLoadingSteps(false)
       return
     }
     setLoadingSteps(true)
-    setEditingSteps(false)
-    setEditingTags(false)
     getRecipeSteps(asUUID(selectedRecipeId))
       .then((response) => {
         setSteps(response.steps)
@@ -38,5 +27,5 @@ export function useRecipeSteps({
       .finally(() => {
         setLoadingSteps(false)
       })
-  }, [selectedRecipeId, setSteps, setLoadingSteps, setEditingSteps, setEditingTags])
+  }, [selectedRecipeId, setSteps, setLoadingSteps])
 }
