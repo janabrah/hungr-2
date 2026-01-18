@@ -72,6 +72,12 @@ func handleRecipeSubresources(w http.ResponseWriter, r *http.Request) {
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	} else if strings.HasSuffix(r.URL.Path, "/files") {
+		if r.Method == "POST" {
+			handlers.AddRecipeFiles(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	} else if r.Method == "PATCH" {
 		handlers.PatchRecipe(w, r)
 	} else {

@@ -202,6 +202,125 @@ func DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
+func AddRecipeFiles(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse recipe UUID from path: /api/recipes/{uuid}/files
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/api/recipes/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		respondWithError(w, http.StatusBadRequest, "recipe uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(parts[0])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid recipe uuid")
+		return
+	}
+
+	// Check if recipe exists
+	_, err = storage.GetRecipeByUUID(recipeUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "recipe not found")
+			return
+		}
+		logger.Error(ctx, "failed to get recipe", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe")
+		return
+	}
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		logger.Error(ctx, "failed to parse multipart form", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusBadRequest, "failed to parse upload")
+		return
+	}
+
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		respondWithError(w, http.StatusBadRequest, "at least one file is required")
+		return
+	}
+
+	type fileData struct {
+		data        []byte
+		contentType string
+	}
+
+	filesData := make([]fileData, 0, len(files))
+	for i, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			logger.Error(ctx, "failed to open uploaded file", err, "recipe_uuid", recipeUUID, "file_index", i)
+			respondWithError(w, http.StatusInternalServerError, "failed to process uploaded file")
+			return
+		}
+
+		data, err := io.ReadAll(file)
+		file.Close()
+		if err != nil {
+			logger.Error(ctx, "failed to read uploaded file", err, "recipe_uuid", recipeUUID, "file_index", i)
+			respondWithError(w, http.StatusInternalServerError, "failed to read uploaded file")
+			return
+		}
+
+		contentType := fileHeader.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = "image/jpeg"
+		}
+
+		filesData = append(filesData, fileData{data: data, contentType: contentType})
+	}
+
+	existingFiles, err := storage.GetFilesByRecipeUUIDs([]uuid.UUID{recipeUUID})
+	if err != nil {
+		logger.Error(ctx, "failed to load recipe files", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to load recipe files")
+		return
+	}
+
+	maxPage := -1
+	for _, f := range existingFiles {
+		if f.PageNumber > maxPage {
+			maxPage = f.PageNumber
+		}
+	}
+
+	tx, err := storage.BeginTx(ctx)
+	if err != nil {
+		logger.Error(ctx, "failed to begin transaction", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to store files")
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	insertedFiles := make([]models.File, 0, len(filesData))
+	for i, fd := range filesData {
+		file, err := storage.TxInsertFile(ctx, tx, recipeUUID, fd.data, fd.contentType, maxPage+i+1, true)
+		if err != nil {
+			logger.Error(ctx, "failed to store file", err, "recipe_uuid", recipeUUID, "file_index", i)
+			respondWithError(w, http.StatusInternalServerError, "failed to store file")
+			return
+		}
+		insertedFiles = append(insertedFiles, *file)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		logger.Error(ctx, "failed to commit transaction", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to store files")
+		return
+	}
+
+	response := models.FileUploadResponse{
+		Success: true,
+		Files:   insertedFiles,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func GetFile(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	path := r.URL.Path

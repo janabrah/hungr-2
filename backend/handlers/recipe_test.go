@@ -549,6 +549,135 @@ func TestUpdateRecipeSteps_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestAddRecipeFiles_MissingUUID(t *testing.T) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/recipes//files", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	AddRecipeFiles(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestAddRecipeFiles_RecipeNotFound(t *testing.T) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "test.jpg")
+	part.Write([]byte("fake image data"))
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/recipes/00000000-0000-0000-0000-000000000001/files", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	AddRecipeFiles(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestAddRecipeFiles_MissingFile(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("add-files-missing-file", testEmail)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/recipes/"+recipe.UUID.String()+"/files", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	AddRecipeFiles(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestAddRecipeFiles_Success(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("add-files-success", testEmail)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	_, err = storage.InsertFile(recipe.UUID, []byte("existing image data"), "image/jpeg", 0, true)
+	if err != nil {
+		t.Fatalf("Failed to insert initial file: %v", err)
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for i := 0; i < 2; i++ {
+		part, _ := writer.CreateFormFile("file", "test.jpg")
+		part.Write([]byte("new image data"))
+	}
+	writer.Close()
+
+	req := httptest.NewRequest("POST", "/api/recipes/"+recipe.UUID.String()+"/files", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	AddRecipeFiles(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var response models.FileUploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if !response.Success {
+		t.Error("Expected success to be true")
+	}
+	if len(response.Files) != 2 {
+		t.Fatalf("Expected 2 files, got %d", len(response.Files))
+	}
+
+	files, err := storage.GetFilesByRecipeUUIDs([]uuid.UUID{recipe.UUID})
+	if err != nil {
+		t.Fatalf("Failed to load files: %v", err)
+	}
+	if len(files) != 3 {
+		t.Fatalf("Expected 3 files total, got %d", len(files))
+	}
+
+	if files[1].PageNumber != 1 || files[2].PageNumber != 2 {
+		t.Errorf("Expected new files to have page numbers 1 and 2, got %d and %d", files[1].PageNumber, files[2].PageNumber)
+	}
+}
+
 func TestPatchRecipe_MissingUUID(t *testing.T) {
 	body := `{"tagString": "test"}`
 	req := httptest.NewRequest("PATCH", "/api/recipes/", strings.NewReader(body))
