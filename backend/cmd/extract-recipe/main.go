@@ -24,9 +24,9 @@ type RecipeStepResponse struct {
 }
 
 type OpenAIRequest struct {
-	Model          string           `json:"model"`
-	Messages       []OpenAIMessage  `json:"messages"`
-	ResponseFormat *ResponseFormat  `json:"response_format,omitempty"`
+	Model          string          `json:"model"`
+	Messages       []OpenAIMessage `json:"messages"`
+	ResponseFormat *ResponseFormat `json:"response_format,omitempty"`
 }
 
 type ResponseFormat struct {

@@ -46,9 +46,9 @@ const (
 		FROM users u WHERE u.email = $2
 		RETURNING uuid, name, user_uuid, '' as tag_string, created_at, $2 as owner_email`
 
-	queryDeleteRecipeTags = `DELETE FROM recipe_tags WHERE recipe_uuid = $1`
+	queryDeleteRecipeTags  = `DELETE FROM recipe_tags WHERE recipe_uuid = $1`
 	queryDeleteRecipeFiles = `DELETE FROM files WHERE recipe_uuid = $1`
-	queryDeleteRecipe = `DELETE FROM recipes WHERE uuid = $1`
+	queryDeleteRecipe      = `DELETE FROM recipes WHERE uuid = $1`
 )
 
 func GetRecipeByUUID(recipeUUID uuid.UUID) (*models.Recipe, error) {
