@@ -1,6 +1,6 @@
 # Hungr
 
-A recipe tracking webapp. Live at https://hungr-app.vercel.app
+A recipe tracking webapp. Live at https://hungr.dev
 
 ## Features
 
