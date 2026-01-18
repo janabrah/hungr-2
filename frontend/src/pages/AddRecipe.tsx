@@ -7,16 +7,21 @@ import {
   createRecipe,
   getFriendlyErrorMessage,
 } from '../api'
-import { Button } from '../components/Button'
-import { Icon } from '../types'
+import {
+  AddRecipeModeSelector,
+  CreateNewRecipeSection,
+  ExtractedStepsSection,
+  ExtractFromImagesForm,
+  ExtractFromTextForm,
+  ExtractFromUrlForm,
+  SaveToExistingRecipeSection,
+  type InputMode,
+} from '../components/AddRecipe'
 import { Header } from '../components/Header'
-import { RecipeSteps } from '../components/RecipeSteps'
-import { ImageUploader } from '../components/ImageUploader'
-import type { RecipeStepResponse as RecipeStep, Recipe } from '../types.gen'
+import type { RecipeStepResponse as RecipeStep, Recipe, RecipeStepsResponse } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 import type { Page } from '../types'
 import { useRecipesForEmail } from '../hooks/useRecipesForEmail'
-type InputMode = 'url' | 'image' | 'text'
 
 type Props = {
   email: Email
@@ -27,9 +32,6 @@ type Props = {
 export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   const [inputMode, setInputMode] = useState<InputMode>('image')
 
-  // Import mode state
-  const [url, setUrl] = useState('')
-  const [pastedText, setPastedText] = useState('')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [steps, setSteps] = useState<RecipeStep[] | null>(null)
@@ -39,22 +41,20 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   const [newRecipeTags, setNewRecipeTags] = useState('')
   const [newRecipeSource, setNewRecipeSource] = useState('')
 
-  // Shared state
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   useRecipesForEmail({ email, setRecipes })
 
-  // Import handlers
   const handleImageFiles = (newFiles: File[]) => {
     if (newFiles.length === 0) return
     setImageFiles((prev) => [...prev, ...newFiles])
 
     newFiles.forEach((file) => {
       const reader = new FileReader()
-      reader.onload = (e) => {
-        const result = e.target?.result
+      reader.onload = (event) => {
+        const result = event.target?.result
         if (typeof result === 'string') {
           setImagePreviews((prev) => [...prev, result])
         }
@@ -73,33 +73,20 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
     setImagePreviews([])
   }
 
-  const handleExtract = (event: React.FormEvent) => {
-    event.preventDefault()
-    if (submitting) return
-    if (inputMode === 'url' && url === '') return
-    if (inputMode === 'image' && imageFiles.length === 0) return
-    if (inputMode === 'text' && pastedText.trim() === '') return
-
+  const startSubmitting = () => {
     setSubmitting(true)
     setError(null)
     setSteps(null)
     setSuccess(false)
+  }
 
-    let extractPromise: Promise<{ steps: RecipeStep[]; tags: string[] }>
-    if (inputMode === 'url') {
-      extractPromise = extractRecipeFromURL(url)
-    } else if (inputMode === 'image') {
-      extractPromise = extractRecipeFromImages(imageFiles)
-    } else {
-      extractPromise = extractRecipeFromText(pastedText)
-    }
-
-    extractPromise
+  const processExtraction = (response: Promise<RecipeStepsResponse>, source?: string) => {
+    response
       .then((response) => {
         setSteps(response.steps)
         setNewRecipeTags(response.tags.join(', '))
-        if (inputMode === 'url' && newRecipeSource === '') {
-          setNewRecipeSource(url)
+        if (source && source !== '') {
+          setNewRecipeSource(source)
         }
       })
       .catch((err: unknown) => {
@@ -108,6 +95,24 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       .finally(() => {
         setSubmitting(false)
       })
+  }
+
+  const handleExtractFromUrl = (url: string) => {
+    if (submitting || url === '') return
+    startSubmitting()
+    processExtraction(extractRecipeFromURL(url), url)
+  }
+
+  const handleExtractFromImages = () => {
+    if (submitting || imageFiles.length === 0) return
+    startSubmitting()
+    processExtraction(extractRecipeFromImages(imageFiles))
+  }
+
+  const handleExtractFromText = (text: string) => {
+    if (submitting || text.trim() === '') return
+    startSubmitting()
+    processExtraction(extractRecipeFromText(text))
   }
 
   const handleSaveToExisting = async () => {
@@ -119,8 +124,6 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       await updateRecipeSteps(asUUID(selectedRecipeId), steps)
       setSuccess(true)
       setSteps(null)
-      setUrl('')
-      setPastedText('')
       clearAllImages()
       setSelectedRecipeId('')
     } catch (err: unknown) {
@@ -151,8 +154,6 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       }
       setSuccess(true)
       setSteps(null)
-      setUrl('')
-      setPastedText('')
       clearAllImages()
       setNewRecipeName('')
       setNewRecipeTags('')
@@ -179,276 +180,66 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
         {error !== null && <p className="error">{error}</p>}
         {success && <p className="success">Recipe saved successfully!</p>}
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <Button
-            variant={inputMode === 'image' ? 'primary' : 'secondary'}
-            onClick={() => {
-              setInputMode('image')
-              resetState()
-            }}
-            style={{ marginRight: '0.5rem' }}
-          >
-            From Image
-          </Button>
-          <Button
-            variant={inputMode === 'url' ? 'primary' : 'secondary'}
-            onClick={() => {
-              setInputMode('url')
-              resetState()
-            }}
-            style={{ marginRight: '0.5rem' }}
-          >
-            From URL
-          </Button>
-          <Button
-            variant={inputMode === 'text' ? 'primary' : 'secondary'}
-            onClick={() => {
-              setInputMode('text')
-              resetState()
-            }}
-          >
-            Paste Text
-          </Button>
+        <AddRecipeModeSelector
+          inputMode={inputMode}
+          onChange={(mode) => {
+            setInputMode(mode)
+            resetState()
+          }}
+        />
+
+        <div style={{ display: inputMode === 'url' ? 'block' : 'none' }}>
+          <ExtractFromUrlForm onSubmit={handleExtractFromUrl} submitting={submitting} />
         </div>
 
-        {inputMode === 'url' && (
-          <form onSubmit={handleExtract}>
-            <p
-              style={{
-                fontSize: '0.875rem',
-                opacity: 0.7,
-                marginBottom: '1rem',
-              }}
-            >
-              Extract recipe ingredients and steps from a website using AI
-            </p>
-            <input
-              type="url"
-              placeholder="https://example.com/recipe"
-              required
-              className="input"
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value)
-              }}
-            />
-            <Button type="submit" disabled={submitting || url === ''}>
-              {submitting ? (
-                <>
-                  <span className="spinner" />
-                  Extracting recipe...
-                </>
-              ) : (
-                'Extract Recipe'
-              )}
-            </Button>
-          </form>
-        )}
+        <div style={{ display: inputMode === 'image' ? 'block' : 'none' }}>
+          <ExtractFromImagesForm
+            previews={imagePreviews}
+            hasImages={imageFiles.length > 0}
+            submitting={submitting}
+            onSubmit={handleExtractFromImages}
+            onFilesSelected={handleImageFiles}
+            onRemoveImage={removeImage}
+            onClearImages={clearAllImages}
+            onSkip={() => {
+              setSteps([])
+            }}
+          />
+        </div>
 
-        {inputMode === 'image' && (
-          <form onSubmit={handleExtract}>
-            <p
-              style={{
-                fontSize: '0.875rem',
-                opacity: 0.7,
-                marginBottom: '1rem',
-              }}
-            >
-              Extract recipe from photos using AI (e.g., cookbook pages, recipe cards)
-            </p>
-            <ImageUploader
-              variant="inline"
-              onFilesSelected={handleImageFiles}
-              disabled={submitting}
-              helperText="Select multiple images if the recipe spans multiple pages"
-              pasteHint="Paste images here, too"
-            />
-            {imagePreviews.length > 0 && (
-              <div style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                  {imagePreviews.map((preview, index) => (
-                    <div key={index} style={{ position: 'relative' }}>
-                      <img
-                        src={preview}
-                        alt={`Recipe image ${String(index + 1)}`}
-                        style={{
-                          width: '150px',
-                          height: '150px',
-                          objectFit: 'cover',
-                          borderRadius: '0.25rem',
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        icon={Icon.Close}
-                        showText={false}
-                        aria-label="Remove image"
-                        onClick={() => {
-                          removeImage(index)
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={clearAllImages}
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  Clear All
-                </Button>
-              </div>
-            )}
-            <div className="flex-row" style={{ gap: '0.5rem' }}>
-              <Button type="submit" disabled={submitting || imageFiles.length === 0}>
-                {submitting ? (
-                  <>
-                    <span className="spinner" />
-                    Extracting recipe...
-                  </>
-                ) : (
-                  'Extract Recipe'
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={submitting || imageFiles.length === 0}
-                onClick={() => {
-                  setSteps([])
-                }}
-              >
-                Skip Extraction
-              </Button>
-            </div>
-          </form>
-        )}
-
-        {inputMode === 'text' && (
-          <form onSubmit={handleExtract}>
-            <p
-              style={{
-                fontSize: '0.875rem',
-                opacity: 0.7,
-                marginBottom: '1rem',
-              }}
-            >
-              Paste recipe text from any source (e.g., copied from a website, email, or document)
-            </p>
-            <textarea
-              placeholder="Paste your recipe text here..."
-              className="input"
-              style={{ minHeight: '200px', resize: 'vertical' }}
-              value={pastedText}
-              onChange={(e) => {
-                setPastedText(e.target.value)
-              }}
-            />
-            <Button type="submit" disabled={submitting || pastedText.trim() === ''}>
-              {submitting ? (
-                <>
-                  <span className="spinner" />
-                  Extracting recipe...
-                </>
-              ) : (
-                'Extract Recipe'
-              )}
-            </Button>
-          </form>
-        )}
+        <div style={{ display: inputMode === 'text' ? 'block' : 'none' }}>
+          <ExtractFromTextForm onSubmit={handleExtractFromText} submitting={submitting} />
+        </div>
 
         {steps !== null && (
           <div style={{ marginTop: '2rem' }}>
             {steps.length > 0 && (
-              <div
-                style={{
-                  marginBottom: '2rem',
-                  paddingBottom: '1rem',
-                  borderBottom: '1px solid #ccc',
-                }}
-              >
-                <h3>Save to Existing Recipe</h3>
-                <select
-                  className="select"
-                  value={selectedRecipeId}
-                  onChange={(e) => {
-                    setSelectedRecipeId(e.target.value)
-                  }}
-                >
-                  <option value="">Select a recipe</option>
-                  {recipes.map((recipe) => (
-                    <option key={recipe.uuid} value={recipe.uuid}>
-                      {recipe.name}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  onClick={() => {
-                    void handleSaveToExisting()
-                  }}
-                  disabled={submitting || selectedRecipeId === ''}
-                  style={{ marginTop: '0.5rem' }}
-                >
-                  {submitting ? 'Saving...' : 'Save to Recipe'}
-                </Button>
-              </div>
-            )}
-
-            <div
-              style={{
-                marginBottom: '2rem',
-                paddingBottom: '1rem',
-                borderBottom: '1px solid #ccc',
-              }}
-            >
-              <h3>{steps.length > 0 ? 'Or Create New Recipe' : 'Create New Recipe'}</h3>
-              <input
-                type="text"
-                placeholder="Recipe name"
-                className="input"
-                value={newRecipeName}
-                onChange={(e) => {
-                  setNewRecipeName(e.target.value)
+              <SaveToExistingRecipeSection
+                recipes={recipes}
+                selectedRecipeId={selectedRecipeId}
+                submitting={submitting}
+                onSelect={setSelectedRecipeId}
+                onSave={() => {
+                  void handleSaveToExisting()
                 }}
               />
-              <div className="flex-row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  placeholder="Tags (comma separated)"
-                  className="input"
-                  style={{ flex: '1 1 220px' }}
-                  value={newRecipeTags}
-                  onChange={(e) => {
-                    setNewRecipeTags(e.target.value)
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Source (URL, cookbook, etc.)"
-                  className="input"
-                  style={{ flex: '1 1 220px' }}
-                  value={newRecipeSource}
-                  onChange={(e) => {
-                    setNewRecipeSource(e.target.value)
-                  }}
-                />
-              </div>
-              <Button
-                onClick={() => {
-                  void handleSaveAsNew()
-                }}
-                disabled={submitting || newRecipeName === ''}
-              >
-                {submitting ? 'Creating...' : 'Create New Recipe'}
-              </Button>
-            </div>
-
-            {steps.length > 0 && (
-              <>
-                <h2>Extracted Steps</h2>
-                <RecipeSteps steps={steps} />
-              </>
             )}
+
+            <CreateNewRecipeSection
+              title={steps.length > 0 ? 'Or Create New Recipe' : 'Create New Recipe'}
+              name={newRecipeName}
+              tags={newRecipeTags}
+              source={newRecipeSource}
+              submitting={submitting}
+              onNameChange={setNewRecipeName}
+              onTagsChange={setNewRecipeTags}
+              onSourceChange={setNewRecipeSource}
+              onCreate={() => {
+                void handleSaveAsNew()
+              }}
+            />
+
+            {steps.length > 0 && <ExtractedStepsSection steps={steps} />}
           </div>
         )}
       </div>
