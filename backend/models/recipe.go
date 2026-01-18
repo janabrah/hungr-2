@@ -49,3 +49,7 @@ type UploadResponse struct {
 type TagsResponse struct {
 	Tags []Tag `json:"tags"`
 }
+
+type PatchRecipeRequest struct {
+	TagString string `json:"tagString"`
+}

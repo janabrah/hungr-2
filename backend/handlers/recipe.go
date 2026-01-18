@@ -387,3 +387,92 @@ func UpdateRecipeSteps(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
+
+func PatchRecipe(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse recipe UUID from path: /api/recipes/{uuid}
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/api/recipes/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		respondWithError(w, http.StatusBadRequest, "recipe uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(parts[0])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid recipe uuid")
+		return
+	}
+
+	// Check if recipe exists
+	_, err = storage.GetRecipeByUUID(recipeUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "recipe not found")
+			return
+		}
+		logger.Error(ctx, "failed to get recipe", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe")
+		return
+	}
+
+	// Parse request body
+	var request models.PatchRecipeRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Start transaction
+	tx, err := storage.BeginTx(ctx)
+	if err != nil {
+		logger.Error(ctx, "failed to begin transaction", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to update recipe")
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	// Delete existing recipe tags
+	if err := storage.TxDeleteRecipeTags(ctx, tx, recipeUUID); err != nil {
+		logger.Error(ctx, "failed to delete existing tags", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to update tags")
+		return
+	}
+
+	// Insert new tags
+	if request.TagString != "" {
+		tags := strings.Split(request.TagString, ", ")
+		for _, tagName := range tags {
+			tagName = strings.TrimSpace(tagName)
+			if tagName == "" {
+				continue
+			}
+
+			tagUUID := storage.CreateTagUUID(tagName)
+			_, err := storage.TxUpsertTag(ctx, tx, tagUUID, tagName)
+			if err != nil {
+				logger.Error(ctx, "failed to upsert tag", err, "recipe_uuid", recipeUUID, "tag", tagName)
+				respondWithError(w, http.StatusInternalServerError, "failed to create tag")
+				return
+			}
+
+			if err := storage.TxInsertRecipeTag(ctx, tx, recipeUUID, tagUUID); err != nil {
+				logger.Error(ctx, "failed to link tag to recipe", err, "recipe_uuid", recipeUUID, "tag_uuid", tagUUID)
+				respondWithError(w, http.StatusInternalServerError, "failed to link tag")
+				return
+			}
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit(ctx); err != nil {
+		logger.Error(ctx, "failed to commit transaction", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to update recipe")
+		return
+	}
+
+	logger.Info(ctx, "recipe tags updated", "recipe_uuid", recipeUUID, "tag_string", request.TagString)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}

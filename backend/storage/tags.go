@@ -59,6 +59,12 @@ func TxInsertRecipeTag(ctx context.Context, tx *Tx, recipeUUID, tagUUID uuid.UUI
 	return err
 }
 
+// TxDeleteRecipeTags deletes all tags for a recipe within a transaction
+func TxDeleteRecipeTags(ctx context.Context, tx *Tx, recipeUUID uuid.UUID) error {
+	_, err := tx.tx.Exec(ctx, "DELETE FROM recipe_tags WHERE recipe_uuid = $1", recipeUUID)
+	return err
+}
+
 func CreateTagUUID(tag string) uuid.UUID {
 	namespace := uuid.Must(uuid.FromString(tagNamespace))
 	return uuid.NewV5(namespace, tag)
