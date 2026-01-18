@@ -68,6 +68,12 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sourceParam := r.URL.Query().Get("source")
+	var source *string
+	if sourceParam != "" {
+		source = &sourceParam
+	}
+
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		logger.Error(ctx, "failed to parse multipart form", err, "email", email)
 		respondWithError(w, http.StatusBadRequest, "failed to parse upload")
@@ -114,7 +120,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(ctx)
 
-	recipe, err := storage.TxInsertRecipeByEmail(ctx, tx, name, email)
+	recipe, err := storage.TxInsertRecipeByEmail(ctx, tx, name, email, source)
 	if err != nil {
 		logger.Error(ctx, "failed to insert recipe", err, "email", email, "name", name)
 		respondWithError(w, http.StatusInternalServerError, "failed to create recipe - user may not exist")
@@ -564,6 +570,14 @@ func PatchRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(ctx)
+
+	if request.Source != nil {
+		if err := storage.TxUpdateRecipeSource(ctx, tx, recipeUUID, request.Source); err != nil {
+			logger.Error(ctx, "failed to update recipe source", err, "recipe_uuid", recipeUUID)
+			respondWithError(w, http.StatusInternalServerError, "failed to update recipe")
+			return
+		}
+	}
 
 	// Delete existing recipe tags
 	if err := storage.TxDeleteRecipeTags(ctx, tx, recipeUUID); err != nil {

@@ -12,6 +12,7 @@ type Recipe struct {
 	User       uuid.UUID `json:"user_uuid"`
 	OwnerEmail string    `json:"owner_email"`
 	TagString  string    `json:"tag_string"`
+	Source     *string   `json:"source"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -56,5 +57,6 @@ type TagsResponse struct {
 }
 
 type PatchRecipeRequest struct {
-	TagString string `json:"tagString"`
+	TagString string  `json:"tagString"`
+	Source    *string `json:"source"`
 }

@@ -8,6 +8,10 @@ import (
 	"github.com/gofrs/uuid"
 )
 
+func ptr(s string) *string {
+	return &s
+}
+
 func TestRecipeJSON(t *testing.T) {
 	recipe := Recipe{
 		UUID:       uuid.Must(uuid.NewV4()),
@@ -15,6 +19,7 @@ func TestRecipeJSON(t *testing.T) {
 		User:       uuid.Must(uuid.NewV4()),
 		OwnerEmail: "owner@example.com",
 		TagString:  "dinner, quick",
+		Source:     ptr("cookbook"),
 		CreatedAt:  time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC),
 	}
 
@@ -26,7 +31,7 @@ func TestRecipeJSON(t *testing.T) {
 	var m map[string]interface{}
 	json.Unmarshal(data, &m)
 
-	expectedFields := []string{"uuid", "name", "user_uuid", "owner_email", "tag_string", "created_at"}
+	expectedFields := []string{"uuid", "name", "user_uuid", "owner_email", "tag_string", "source", "created_at"}
 	for _, field := range expectedFields {
 		if _, ok := m[field]; !ok {
 			t.Errorf("Expected field %q in JSON output", field)
