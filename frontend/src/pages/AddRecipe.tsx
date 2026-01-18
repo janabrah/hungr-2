@@ -93,7 +93,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
     setSteps(null)
     setSuccess(false)
 
-    let extractPromise: Promise<{ steps: RecipeStep[] }>
+    let extractPromise: Promise<{ steps: RecipeStep[]; tags: string[] }>
     if (inputMode === 'url') {
       extractPromise = extractRecipeFromURL(url)
     } else if (inputMode === 'image') {
@@ -105,6 +105,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
     extractPromise
       .then((response) => {
         setSteps(response.steps)
+        setNewRecipeTags(response.tags.join(', '))
       })
       .catch((err: unknown) => {
         setError(getFriendlyErrorMessage(err, 'Failed to extract recipe'))

@@ -74,7 +74,10 @@ export const isFileUploadResponse = (value: unknown): value is FileUploadRespons
   value['files'].every(isFile)
 
 export const isRecipeStepsResponse = (value: unknown): value is RecipeStepsResponse =>
-  isRecord(value) && Array.isArray(value['steps']) && value['steps'].every(isRecipeStepResponse)
+  isRecord(value) &&
+  Array.isArray(value['steps']) &&
+  value['steps'].every(isRecipeStepResponse) &&
+  isStringArray(value['tags'])
 
 export const isTagsResponse = (value: unknown): value is { tags: Tag[] } =>
   isRecord(value) && Array.isArray(value['tags']) && value['tags'].every(isTag)

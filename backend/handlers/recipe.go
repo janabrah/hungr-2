@@ -414,9 +414,22 @@ func GetRecipeSteps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tags, err := storage.GetTagsByRecipeUUID(recipeUUID)
+	if err != nil {
+		logger.Error(ctx, "failed to get recipe tags", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe tags")
+		return
+	}
+
+	tagNames := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		tagNames = append(tagNames, tag.Name)
+	}
+
 	// Build response
 	response := models.RecipeStepsResponse{
 		Steps: make([]models.RecipeStepResponse, len(stepsWithIngredients)),
+		Tags:  tagNames,
 	}
 
 	for i, step := range stepsWithIngredients {

@@ -4,118 +4,122 @@
 // source: connection.go
 
 export interface CreateConnectionRequest {
-  target_user_uuid: string
+  target_user_uuid: string;
 }
 export interface ConnectionsResponse {
-  success: boolean
-  connections: User[]
+  success: boolean;
+  connections: User[];
 }
 
 //////////
 // source: ingredient.go
 
-export type IngredientUnit = string
-export const UnitML: IngredientUnit = 'ml'
-export const UnitMG: IngredientUnit = 'mg'
-export const UnitCount: IngredientUnit = 'count'
+export type IngredientUnit = string;
+export const UnitML: IngredientUnit = "ml";
+export const UnitMG: IngredientUnit = "mg";
+export const UnitCount: IngredientUnit = "count";
 export interface IngredientName {
-  uuid: string
-  name: string
-  created_at: string
-  updated_at: string
+  uuid: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
 }
 export interface RecipeStep {
-  uuid: string
-  recipe_uuid: string
-  step_number: number /* int */
-  instructions: string
-  created_at: string
-  updated_at: string
+  uuid: string;
+  recipe_uuid: string;
+  step_number: number /* int */;
+  instructions: string;
+  created_at: string;
+  updated_at: string;
 }
 export interface StepIngredient {
-  uuid: string
-  recipe_step_uuid: string
-  ingredient_name_uuid: string
-  ingredient_type: IngredientUnit
-  quantity: number /* float64 */
-  created_at: string
-  updated_at: string
+  uuid: string;
+  recipe_step_uuid: string;
+  ingredient_name_uuid: string;
+  ingredient_type: IngredientUnit;
+  quantity: number /* float64 */;
+  created_at: string;
+  updated_at: string;
 }
 /**
  * StepIngredientWithName includes the ingredient name for convenience
  */
 export interface StepIngredientWithName {
-  StepIngredient: StepIngredient
-  ingredient_name: string
+  StepIngredient: StepIngredient;
+  ingredient_name: string;
 }
 /**
  * RecipeStepWithIngredients includes all ingredients for a step
  */
 export interface RecipeStepWithIngredients {
-  RecipeStep: RecipeStep
-  ingredients: StepIngredientWithName[]
+  RecipeStep: RecipeStep;
+  ingredients: StepIngredientWithName[];
 }
 export interface RecipeStepResponse {
-  instruction: string
-  ingredients: string[]
+  instruction: string;
+  ingredients: string[];
 }
 export interface RecipeStepsResponse {
-  steps: RecipeStepResponse[]
+  steps: RecipeStepResponse[];
+  tags: string[];
 }
 
 //////////
 // source: recipe.go
 
 export interface Recipe {
-  uuid: string
-  name: string
-  user_uuid: string
-  owner_email: string
-  tag_string: string
-  created_at: string
+  uuid: string;
+  name: string;
+  user_uuid: string;
+  owner_email: string;
+  tag_string: string;
+  created_at: string;
 }
 export interface File {
-  uuid: string
-  recipe_uuid: string
-  url: string
-  page_number: number /* int */
-  image: boolean
+  uuid: string;
+  recipe_uuid: string;
+  url: string;
+  page_number: number /* int */;
+  image: boolean;
 }
 export interface Tag {
-  uuid: string
-  name: string
+  uuid: string;
+  name: string;
 }
 export interface RecipeTag {
-  recipe_uuid: string
-  tag_uuid: string
+  recipe_uuid: string;
+  tag_uuid: string;
 }
 export interface RecipesResponse {
-  recipeData: Recipe[]
-  fileData: File[]
+  recipeData: Recipe[];
+  fileData: File[];
 }
 export interface UploadResponse {
-  success: boolean
-  recipe: Recipe
-  tags: Tag[]
+  success: boolean;
+  recipe: Recipe;
+  tags: Tag[];
 }
 export interface TagsResponse {
-  tags: Tag[]
+  tags: Tag[];
+}
+export interface PatchRecipeRequest {
+  tagString: string;
 }
 
 //////////
 // source: user.go
 
 export interface User {
-  uuid: string
-  email: string
-  name: string
-  created_at: string
+  uuid: string;
+  email: string;
+  name: string;
+  created_at: string;
 }
 export interface UserResponse {
-  success: boolean
-  user: User
+  success: boolean;
+  user: User;
 }
 export interface CreateUserRequest {
-  email: string
-  name: string
+  email: string;
+  name: string;
 }

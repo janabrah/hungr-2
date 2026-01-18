@@ -16,6 +16,7 @@ import (
 
 type RecipeStepsResponse struct {
 	Steps []RecipeStepResponse `json:"steps"`
+	Tags  []string             `json:"tags"`
 }
 
 type RecipeStepResponse struct {
@@ -80,17 +81,7 @@ func loadEnvFile(filename string) {
 	}
 }
 
-const systemPrompt = `You are a recipe extraction assistant. Given the text content of a recipe webpage, extract the recipe steps and ingredients into a structured JSON format.
-
-Output format:
-{
-  "steps": [
-    {
-      "instruction": "Step instruction text",
-      "ingredients": ["quantity unit ingredient", "quantity unit ingredient"]
-    }
-  ]
-}
+const systemPrompt = `You are a recipe extraction assistant. Given the text content of a recipe webpage, extract the recipe steps and ingredients into the JSON schema provided.
 
 Rules:
 1. ALWAYS start with a step that has an empty instruction "" containing ALL ingredients from the recipe. This must be the first element in the steps array.
@@ -99,7 +90,8 @@ Rules:
 4. Use standard cooking units: tsp, tbsp, cup, oz, lb, g, kg, ml, l
 5. For countable items without units, just use the number and name (e.g., "2 eggs", "1 onion")
 6. Do NOT include temperatures (e.g., "350°F", "180°C") - these are not ingredients
-7. Return ONLY valid JSON, no markdown formatting or explanation`
+7. Also return a "tags" array with 3-8 concise, lowercase tags (1-3 words each). Include at least one role tag (e.g., "dinner", "appetizer", "breakfast", "dessert") and 1-2 tags for major ingredients (e.g., "chicken", "salmon", "mushroom")
+8. Return ONLY valid JSON, no markdown formatting or explanation`
 
 func main() {
 	loadEnvFile(".env")
@@ -217,8 +209,16 @@ func extractRecipeWithOpenAI(apiKey, content string) (*RecipeStepsResponse, erro
 					"additionalProperties": false,
 				},
 			},
+			"tags": map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type":        "string",
+					"description": "Concise tag describing the recipe (e.g., 'dessert', 'gluten-free', 'quick')",
+				},
+				"description": "Suggested tags for the recipe",
+			},
 		},
-		"required":             []string{"steps"},
+		"required":             []string{"steps", "tags"},
 		"additionalProperties": false,
 	}
 

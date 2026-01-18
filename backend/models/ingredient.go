@@ -61,4 +61,5 @@ type RecipeStepResponse struct {
 
 type RecipeStepsResponse struct {
 	Steps []RecipeStepResponse `json:"steps"`
+	Tags  []string             `json:"tags"`
 }
