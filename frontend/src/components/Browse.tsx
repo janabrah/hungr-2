@@ -4,11 +4,13 @@ import { Button } from './Button'
 import { RecipeSteps } from './RecipeSteps'
 import { RecipeStepsEditor } from './RecipeStepsEditor'
 import { TagEditor } from './TagEditor'
-import { Icon, type Page } from '../types'
-import { getFileURL } from '../api'
+import { TagFilter } from './TagFilter'
+import { Icon } from '../types'
+import { getFileURL, patchRecipe, updateRecipeSteps, getFriendlyErrorMessage } from '../api'
 import type { RecipeWithFiles } from '../hooks/useRecipesWithFiles'
-import type { Email } from '../branded'
+import { asUUID } from '../branded'
 import type { RecipeStepResponse as RecipeStep } from '../types.gen'
+import { useRecipeSteps } from '../hooks/useRecipeSteps'
 
 export function BrowseLayout({ children }: { children: ReactNode }) {
   return <div className="container">{children}</div>
@@ -43,6 +45,19 @@ export function FilterRow({ children }: { children: ReactNode }) {
   )
 }
 
+type TagFilterSectionProps = {
+  value: string[]
+  onChange: (next: string[]) => void
+}
+
+export function TagFilterSection({ value, onChange }: TagFilterSectionProps) {
+  return (
+    <FilterRow>
+      <TagFilter value={value} onChange={onChange} />
+    </FilterRow>
+  )
+}
+
 type RecipeHeaderProps = {
   name: string
   deleting: boolean
@@ -51,7 +66,7 @@ type RecipeHeaderProps = {
 
 export function RecipeHeader({ name, deleting, onDelete }: RecipeHeaderProps) {
   return (
-    <InlineRow>
+    <InlineRow style={{ marginBottom: '1rem' }}>
       <h2 style={{ margin: 0 }}>{name}</h2>
       <Button
         variant="danger"
@@ -134,19 +149,29 @@ export function RecipeImages({ name, files }: RecipeImagesProps) {
 }
 
 type RecipeTagsSectionProps = {
+  selectedRecipeId: string
   tags: string
-  onSave: (tags: string) => Promise<void>
+  onError: (message: string) => void
+  refetch: () => void
 }
 
-export function RecipeTagsSection({ tags, onSave }: RecipeTagsSectionProps) {
+export function RecipeTagsSection({
+  selectedRecipeId,
+  tags,
+  onError,
+  refetch,
+}: RecipeTagsSectionProps) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const handleSave = async (nextTags: string) => {
     setSaving(true)
     try {
-      await onSave(nextTags)
+      await patchRecipe(asUUID(selectedRecipeId), nextTags)
+      refetch()
       setEditing(false)
+    } catch (err: unknown) {
+      onError(getFriendlyErrorMessage(err, 'Failed to save tags'))
     } finally {
       setSaving(false)
     }
@@ -172,20 +197,36 @@ export function RecipeTagsSection({ tags, onSave }: RecipeTagsSectionProps) {
 }
 
 type RecipeStepsSectionProps = {
-  steps: RecipeStep[]
-  loading: boolean
-  onSave: (steps: RecipeStep[]) => Promise<void>
+  selectedRecipeId: string
+  onError: (message: string) => void
+  refetch: () => void
 }
 
-export function RecipeStepsSection({ steps, loading, onSave }: RecipeStepsSectionProps) {
+export function RecipeStepsSection({
+  selectedRecipeId,
+  onError,
+  refetch,
+}: RecipeStepsSectionProps) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [steps, setSteps] = useState<RecipeStep[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useRecipeSteps({
+    selectedRecipeId,
+    setSteps,
+    setLoadingSteps: setLoading,
+  })
 
   const handleSave = async (nextSteps: RecipeStep[]) => {
     setSaving(true)
     try {
-      await onSave(nextSteps)
+      await updateRecipeSteps(asUUID(selectedRecipeId), nextSteps)
+      setSteps(nextSteps)
+      refetch()
       setEditing(false)
+    } catch (err: unknown) {
+      onError(getFriendlyErrorMessage(err, 'Failed to save steps'))
     } finally {
       setSaving(false)
     }
@@ -215,10 +256,4 @@ export function RecipeStepsSection({ steps, loading, onSave }: RecipeStepsSectio
       )}
     </>
   )
-}
-
-export type BrowseProps = {
-  email: Email
-  currentPage: Page
-  onNavigate: (page: Page) => void
 }

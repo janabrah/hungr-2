@@ -1,14 +1,10 @@
 import { useState } from 'react'
-import { deleteRecipe, updateRecipeSteps, patchRecipe, getFriendlyErrorMessage } from '../api'
+import { deleteRecipe, getFriendlyErrorMessage } from '../api'
 import { Header } from '../components/Header'
 import { RecipeSelect } from '../components/RecipeSelect'
-import { TagFilter } from '../components/TagFilter'
-import type { RecipeStepResponse as RecipeStep } from '../types.gen'
-import { asUUID } from '../branded'
-import { useRecipeSteps } from '../hooks/useRecipeSteps'
+import { asUUID, type Email } from '../branded'
 import { useRecipesWithFiles, type RecipeWithFiles } from '../hooks/useRecipesWithFiles'
 import {
-  FilterRow,
   BrowseLayout,
   RecipeListSection,
   SelectedRecipeSection,
@@ -16,25 +12,15 @@ import {
   RecipeImages,
   RecipeTagsSection,
   RecipeStepsSection,
-  type BrowseProps,
+  TagFilterSection,
 } from '../components/Browse'
+import { getParams, setParams } from '../utils'
+import type { Page } from '../types'
 
-function getParams(): { tags: string[]; recipe: string } {
-  const params = new URLSearchParams(window.location.search)
-  const tagParam = params.get('tags') ?? ''
-  return {
-    tags: tagParam ? tagParam.split(',') : [],
-    recipe: params.get('recipe') ?? '',
-  }
-}
-
-function setParams(tags: string[], recipe: string) {
-  const params = new URLSearchParams()
-  if (tags.length > 0) params.set('tags', tags.join(','))
-  if (recipe !== '') params.set('recipe', recipe)
-  const search = params.toString()
-  const url = search === '' ? '/browse' : `/browse?${search}`
-  window.history.replaceState(null, '', url)
+type BrowseProps = {
+  email: Email
+  currentPage: Page
+  onNavigate: (page: Page) => void
 }
 
 export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
@@ -45,30 +31,8 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(initialParams.recipe)
   const [tagFilter, setTagFilter] = useState<string[]>(initialParams.tags)
   const [deleting, setDeleting] = useState(false)
-  const [steps, setSteps] = useState<RecipeStep[]>([])
-  const [loadingSteps, setLoadingSteps] = useState(false)
 
   const { refetch } = useRecipesWithFiles({ email, setRecipes, setLoading, setError })
-
-  useRecipeSteps({ selectedRecipeId, setSteps, setLoadingSteps })
-
-  const handleSaveSteps = async (newSteps: RecipeStep[]) => {
-    try {
-      await updateRecipeSteps(asUUID(selectedRecipeId), newSteps)
-      refetch()
-    } catch (err: unknown) {
-      setError(getFriendlyErrorMessage(err, 'Failed to save steps'))
-    }
-  }
-
-  const handleSaveTags = async (newTags: string) => {
-    try {
-      await patchRecipe(asUUID(selectedRecipeId), newTags)
-      refetch()
-    } catch (err: unknown) {
-      setError(getFriendlyErrorMessage(err, 'Failed to save tags'))
-    }
-  }
 
   const filteredRecipes =
     tagFilter.length === 0
@@ -114,11 +78,9 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
       <BrowseLayout>
         <h1>Browse Recipes</h1>
 
-        {error !== null && <p className="error">{error}</p>}
+        {error && <p className="error">{error}</p>}
 
-        <FilterRow>
-          <TagFilter value={tagFilter} onChange={handleTagFilterChange} />
-        </FilterRow>
+        <TagFilterSection value={tagFilter} onChange={handleTagFilterChange} />
 
         <RecipeListSection>
           {loading ? (
@@ -133,19 +95,21 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
           )}
         </RecipeListSection>
 
-        {selectedRecipe !== null && (
+        {selectedRecipe && (
           <SelectedRecipeSection>
             <RecipeHeader name={selectedRecipe.name} deleting={deleting} onDelete={handleDelete} />
             <RecipeTagsSection
               key={`tags-${selectedRecipe.uuid}`}
+              selectedRecipeId={selectedRecipe.uuid}
               tags={selectedRecipe.tag_string}
-              onSave={handleSaveTags}
+              onError={setError}
+              refetch={refetch}
             />
             <RecipeStepsSection
               key={`steps-${selectedRecipe.uuid}`}
-              steps={steps}
-              loading={loadingSteps}
-              onSave={handleSaveSteps}
+              selectedRecipeId={selectedRecipe.uuid}
+              onError={setError}
+              refetch={refetch}
             />
             <RecipeImages name={selectedRecipe.name} files={selectedRecipe.files} />
           </SelectedRecipeSection>
