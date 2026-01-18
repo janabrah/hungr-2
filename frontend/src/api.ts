@@ -1,8 +1,10 @@
 import type { User, RecipesResponse, UploadResponse, RecipeStepsResponse, Tag } from './types.gen'
 import type { Email, UUID } from './branded'
+import type { FileUploadResponse } from './types'
 import {
   getErrorMessage,
   isConnectionsResponse,
+  isFileUploadResponse,
   isRecipeStepsResponse,
   isRecipesResponse,
   isTagsResponse,
@@ -92,6 +94,35 @@ export async function createRecipe(
   const data = await readJson(response)
   if (!isUploadResponse(data)) {
     throw new Error('Unexpected create recipe response from server.')
+  }
+  return data
+}
+
+export async function addRecipeFiles(
+  recipeUUID: UUID,
+  files: FileList | File[],
+): Promise<FileUploadResponse> {
+  const formData = new FormData()
+  for (const file of files) {
+    formData.append('file', file)
+  }
+
+  const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}/files`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to upload files: ${response.status.toString()}`,
+    )
+    throw new Error(message)
+  }
+
+  const data = await readJson(response)
+  if (!isFileUploadResponse(data)) {
+    throw new Error('Unexpected file upload response from server.')
   }
   return data
 }

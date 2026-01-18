@@ -12,6 +12,7 @@ import {
   RecipeImages,
   RecipeTagsSection,
   RecipeStepsSection,
+  RecipeAddPhotos,
   TagFilterSection,
 } from '../components/Browse'
 import { getParams, setParams } from '../utils'
@@ -107,6 +108,11 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
             />
             <RecipeStepsSection
               key={`steps-${selectedRecipe.uuid}`}
+              selectedRecipeId={selectedRecipe.uuid}
+              onError={setError}
+              refetch={refetch}
+            />
+            <RecipeAddPhotos
               selectedRecipeId={selectedRecipe.uuid}
               onError={setError}
               refetch={refetch}

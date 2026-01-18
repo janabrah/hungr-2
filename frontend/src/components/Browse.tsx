@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Button } from './Button'
 import { RecipeSteps } from './RecipeSteps'
@@ -6,7 +6,13 @@ import { RecipeStepsEditor } from './RecipeStepsEditor'
 import { TagEditor } from './TagEditor'
 import { TagFilter } from './TagFilter'
 import { Icon } from '../types'
-import { getFileURL, patchRecipe, updateRecipeSteps, getFriendlyErrorMessage } from '../api'
+import {
+  addRecipeFiles,
+  getFileURL,
+  patchRecipe,
+  updateRecipeSteps,
+  getFriendlyErrorMessage,
+} from '../api'
 import type { RecipeWithFiles } from '../hooks/useRecipesWithFiles'
 import { asUUID } from '../branded'
 import type { RecipeStepResponse as RecipeStep } from '../types.gen'
@@ -255,5 +261,53 @@ export function RecipeStepsSection({
         <RecipeSteps steps={steps} />
       )}
     </>
+  )
+}
+
+type RecipeAddPhotosProps = {
+  selectedRecipeId: string
+  onError: (message: string) => void
+  refetch: () => void
+}
+
+export function RecipeAddPhotos({ selectedRecipeId, onError, refetch }: RecipeAddPhotosProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+
+  const openPicker = () => {
+    inputRef.current?.click()
+  }
+
+  const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) return
+    setUploading(true)
+    try {
+      await addRecipeFiles(asUUID(selectedRecipeId), files)
+      refetch()
+    } catch (err: unknown) {
+      onError(getFriendlyErrorMessage(err, 'Failed to upload photos'))
+    } finally {
+      setUploading(false)
+      event.target.value = ''
+    }
+  }
+
+  return (
+    <div style={{ marginTop: '1rem' }}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(event) => {
+          void handleChange(event)
+        }}
+        style={{ display: 'none' }}
+      />
+      <Button onClick={openPicker} disabled={uploading} variant="secondary" className="btn-flat">
+        {uploading ? 'Uploading...' : 'Add Photos'}
+      </Button>
+    </div>
   )
 }

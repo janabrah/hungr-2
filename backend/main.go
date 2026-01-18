@@ -26,7 +26,7 @@ func main() {
 
 	http.HandleFunc("/health", healthCheck)
 	http.HandleFunc("/api/recipes", middleware.RequestLogger(middleware.CORS(handleRecipes, "GET, POST, DELETE, OPTIONS")))
-	http.HandleFunc("/api/recipes/", middleware.RequestLogger(middleware.CORS(handleRecipeSubresources, "GET, PUT, PATCH, OPTIONS")))
+	http.HandleFunc("/api/recipes/", middleware.RequestLogger(middleware.CORS(handleRecipeSubresources, "GET, PUT, PATCH, POST, OPTIONS")))
 	http.HandleFunc("/api/files/", middleware.RequestLogger(middleware.CORS(handleFiles, "GET")))
 	http.HandleFunc("/api/users", middleware.RequestLogger(middleware.CORS(handleUsers, "GET, POST, PUT, DELETE, OPTIONS")))
 	http.HandleFunc("/api/auth/login", middleware.RequestLogger(middleware.CORS(handleLogin, "POST, OPTIONS")))
