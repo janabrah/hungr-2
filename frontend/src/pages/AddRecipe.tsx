@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import {
   extractRecipeFromURL,
   extractRecipeFromImages,
   extractRecipeFromText,
-  getRecipes,
   updateRecipeSteps,
   createRecipe,
   getFriendlyErrorMessage,
@@ -14,6 +13,7 @@ import { RecipeSteps } from '../components/RecipeSteps'
 import type { RecipeStepResponse as RecipeStep, Recipe } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 import type { Page } from '../types'
+import { useRecipesForEmail } from '../hooks/useRecipesForEmail'
 type InputMode = 'url' | 'image' | 'text'
 
 type Props = {
@@ -42,15 +42,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    getRecipes(email)
-      .then((response) => {
-        setRecipes(response.recipeData)
-      })
-      .catch(() => {
-        // Ignore - recipes list is optional
-      })
-  }, [email])
+  useRecipesForEmail({ email, setRecipes })
 
   // Import handlers
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
