@@ -34,11 +34,11 @@ export function TagEditor({ initialTags, onSave, onCancel, saving }: Props) {
         disabled={saving}
       />
       <Stack direction="row">
-        <Button onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? 'Saving...' : 'Save'}
+        </Button>
+        <Button onClick={onCancel} disabled={saving}>
+          Cancel
         </Button>
       </Stack>
     </Stack>

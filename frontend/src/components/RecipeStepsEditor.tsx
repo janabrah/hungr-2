@@ -92,14 +92,14 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
         </div>
       ))}
       <div className="recipe-steps-editor-actions">
-        <Button onClick={addStep} disabled={saving}>
+        <Button variant="secondary" className="btn-flat" onClick={addStep} disabled={saving}>
           Add Step
         </Button>
         <div className="flex-row">
-          <Button onClick={onCancel} disabled={saving}>
+          <Button variant="secondary" className="btn-flat" onClick={onCancel} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button variant="secondary" className="btn-flat" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>

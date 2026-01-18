@@ -1,19 +1,48 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { IconSvg } from './Icons'
+import { Icon } from '../types'
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger'
 
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: ButtonVariant
-  children: ReactNode
+  icon?: Icon
+  showIcon?: boolean
+  showText?: boolean
+  iconPosition?: 'left' | 'right'
+  children?: ReactNode
 }
 
-export function Button({ variant = 'primary', className = '', children, ...props }: Props) {
+export function Button({
+  variant = 'primary',
+  className = '',
+  icon,
+  showIcon = icon !== undefined,
+  showText = true,
+  iconPosition = 'left',
+  children,
+  ...props
+}: Props) {
   const variantClass = variant === 'primary' ? '' : `btn-${variant}`
-  const classes = ['btn', variantClass, className].filter(Boolean).join(' ')
+  const isIconOnly = showIcon && !showText
+  const classes = ['btn', variantClass, isIconOnly ? 'btn-icon-only' : '', className]
+    .filter(Boolean)
+    .join(' ')
+  const ariaLabel =
+    props['aria-label'] ?? (isIconOnly && typeof children === 'string' ? children : undefined)
+  const iconElement =
+    showIcon && icon !== undefined ? (
+      <span className="btn-icon-slot">
+        <IconSvg icon={icon} />
+      </span>
+    ) : null
+  const textElement =
+    showText && children !== undefined ? <span className="btn-text">{children}</span> : null
 
   return (
-    <button className={classes} {...props}>
-      {children}
+    <button className={classes} aria-label={ariaLabel} {...props}>
+      {iconPosition === 'left' ? iconElement : textElement}
+      {iconPosition === 'left' ? textElement : iconElement}
     </button>
   )
 }
@@ -28,34 +57,6 @@ export function IconButton({ className = '', children, ...props }: IconButtonPro
   return (
     <button className={classes} {...props}>
       {children}
-    </button>
-  )
-}
-
-type CloseButtonProps = ButtonHTMLAttributes<HTMLButtonElement>
-
-export function CloseButton({ style, ...props }: CloseButtonProps) {
-  return (
-    <button
-      type="button"
-      style={{
-        position: 'absolute',
-        top: '0.25rem',
-        right: '0.25rem',
-        background: 'rgba(0,0,0,0.6)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '50%',
-        width: '24px',
-        height: '24px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        lineHeight: '1',
-        ...style,
-      }}
-      {...props}
-    >
-      ×
     </button>
   )
 }

@@ -8,6 +8,7 @@ import {
 } from '../api'
 import { Button } from '../components/Button'
 import { Header } from '../components/Header'
+import { Icon } from '../types'
 import { RecipeSteps } from '../components/RecipeSteps'
 import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
 import { RecipeSelect } from '../components/RecipeSelect'
@@ -161,7 +162,14 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
           <div style={{ marginTop: '2rem' }}>
             <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
               <h2 style={{ margin: 0 }}>{selectedRecipe.name}</h2>
-              <Button variant="danger" onClick={handleDelete} disabled={deleting}>
+              <Button
+                variant="danger"
+                onClick={handleDelete}
+                disabled={deleting}
+                icon={Icon.Trash}
+                showText={false}
+                aria-label={deleting ? 'Deleting recipe' : 'Delete recipe'}
+              >
                 {deleting ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
@@ -181,6 +189,10 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
                   onClick={() => {
                     setEditingTags(true)
                   }}
+                  variant="secondary"
+                  icon={Icon.Pencil}
+                  showText={false}
+                  aria-label="Edit tags"
                 >
                   Edit
                 </Button>
@@ -196,6 +208,10 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
                   onClick={() => {
                     setEditingSteps(true)
                   }}
+                  variant="secondary"
+                  icon={Icon.Pencil}
+                  showText={false}
+                  aria-label="Edit steps"
                 >
                   Edit
                 </Button>

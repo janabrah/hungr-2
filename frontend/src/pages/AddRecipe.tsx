@@ -7,7 +7,8 @@ import {
   createRecipe,
   getFriendlyErrorMessage,
 } from '../api'
-import { Button, CloseButton } from '../components/Button'
+import { Button } from '../components/Button'
+import { Icon } from '../types'
 import { Header } from '../components/Header'
 import { RecipeSteps } from '../components/RecipeSteps'
 import type { RecipeStepResponse as RecipeStep, Recipe } from '../types.gen'
@@ -283,7 +284,11 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                           borderRadius: '0.25rem',
                         }}
                       />
-                      <CloseButton
+                      <Button
+                        type="button"
+                        icon={Icon.Close}
+                        showText={false}
+                        aria-label="Remove image"
                         onClick={() => {
                           removeImage(index)
                         }}
