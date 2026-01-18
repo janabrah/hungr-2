@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
   extractRecipeFromURL,
   extractRecipeFromImages,
@@ -11,6 +11,7 @@ import { Button } from '../components/Button'
 import { Icon } from '../types'
 import { Header } from '../components/Header'
 import { RecipeSteps } from '../components/RecipeSteps'
+import { ImageUploader } from '../components/ImageUploader'
 import type { RecipeStepResponse as RecipeStep, Recipe } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 import type { Page } from '../types'
@@ -31,7 +32,6 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   const [pastedText, setPastedText] = useState('')
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
-  const importFileInputRef = useRef<HTMLInputElement>(null)
   const [steps, setSteps] = useState<RecipeStep[] | null>(null)
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [selectedRecipeId, setSelectedRecipeId] = useState('')
@@ -46,26 +46,20 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   useRecipesForEmail({ email, setRecipes })
 
   // Import handlers
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (files && files.length > 0) {
-      const newFiles = Array.from(files)
-      setImageFiles((prev) => [...prev, ...newFiles])
+  const handleImageFiles = (newFiles: File[]) => {
+    if (newFiles.length === 0) return
+    setImageFiles((prev) => [...prev, ...newFiles])
 
-      newFiles.forEach((file) => {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const result = e.target?.result
-          if (typeof result === 'string') {
-            setImagePreviews((prev) => [...prev, result])
-          }
+    newFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const result = e.target?.result
+        if (typeof result === 'string') {
+          setImagePreviews((prev) => [...prev, result])
         }
-        reader.readAsDataURL(file)
-      })
-    }
-    if (importFileInputRef.current) {
-      importFileInputRef.current.value = ''
-    }
+      }
+      reader.readAsDataURL(file)
+    })
   }
 
   const removeImage = (index: number) => {
@@ -76,9 +70,6 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   const clearAllImages = () => {
     setImageFiles([])
     setImagePreviews([])
-    if (importFileInputRef.current) {
-      importFileInputRef.current.value = ''
-    }
   }
 
   const handleExtract = (event: React.FormEvent) => {
@@ -253,23 +244,13 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
             >
               Extract recipe from photos using AI (e.g., cookbook pages, recipe cards)
             </p>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              ref={importFileInputRef}
-              onChange={handleImageChange}
-              style={{ marginBottom: '0.5rem' }}
+            <ImageUploader
+              variant="inline"
+              onFilesSelected={handleImageFiles}
+              disabled={submitting}
+              helperText="Select multiple images if the recipe spans multiple pages"
+              pasteHint="Paste images here, too"
             />
-            <p
-              style={{
-                fontSize: '0.75rem',
-                opacity: 0.6,
-                margin: '0.25rem 0 1rem',
-              }}
-            >
-              Select multiple images if the recipe spans multiple pages
-            </p>
             {imagePreviews.length > 0 && (
               <div style={{ marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>

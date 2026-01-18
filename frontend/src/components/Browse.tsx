@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Button } from './Button'
 import { RecipeSteps } from './RecipeSteps'
 import { RecipeStepsEditor } from './RecipeStepsEditor'
 import { TagEditor } from './TagEditor'
 import { TagFilter } from './TagFilter'
+import { ImageUploader } from './ImageUploader'
 import { Icon } from '../types'
 import {
   addRecipeFiles,
@@ -271,16 +272,10 @@ type RecipeAddPhotosProps = {
 }
 
 export function RecipeAddPhotos({ selectedRecipeId, onError, refetch }: RecipeAddPhotosProps) {
-  const inputRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  const openPicker = () => {
-    inputRef.current?.click()
-  }
-
-  const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files || files.length === 0) return
+  const handleFilesSelected = async (files: File[]) => {
+    if (files.length === 0) return
     setUploading(true)
     try {
       await addRecipeFiles(asUUID(selectedRecipeId), files)
@@ -289,25 +284,20 @@ export function RecipeAddPhotos({ selectedRecipeId, onError, refetch }: RecipeAd
       onError(getFriendlyErrorMessage(err, 'Failed to upload photos'))
     } finally {
       setUploading(false)
-      event.target.value = ''
     }
   }
 
   return (
     <div style={{ marginTop: '1rem' }}>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(event) => {
-          void handleChange(event)
+      <ImageUploader
+        variant="button"
+        onFilesSelected={(files) => {
+          void handleFilesSelected(files)
         }}
-        style={{ display: 'none' }}
+        disabled={uploading}
+        buttonText={uploading ? 'Uploading...' : 'Add Photos'}
+        pasteHint="Or paste images here"
       />
-      <Button onClick={openPicker} disabled={uploading} variant="secondary" className="btn-flat">
-        {uploading ? 'Uploading...' : 'Add Photos'}
-      </Button>
     </div>
   )
 }
