@@ -1,22 +1,20 @@
+In progress
+- Auto tagging (vegetarian, easy, etc) via AI
+- Pictures of completed recipes
+
 Short term:
-- Edit tags for live recipe
 - Edit recipe name
-- Reorder pages in multi-file recipes
+- "source" to store url on url upload recipes, ask for cookbook for cookbook recipes
+- escape to cancel edit flow
+- paste image instead of upload
 
 Medium term:
-- Sharing between users
 - Ratings (searchable)
-- OCR for uploaded recipe images
-- Auto tagging (vegetarian, easy, etc) via AI
-- Nice rendering of extracted recipe text
 - Users add notes to recipes
-- Pictures of completed recipes
 - Support for video recipes (instagram, tiktok, etc)
 
 Long term:
 - Feed
 - Meal planning / calendar integration
 
-Bugs:
-- Searching by tag after the first tag only searches the already-filtered list
-- Some pre-existing lint errors in frontend components (void expression warnings)
+
