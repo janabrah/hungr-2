@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -196,6 +197,46 @@ func TestCreateRecipe_WithFiles(t *testing.T) {
 	storage.DeleteRecipe(response.Recipe.UUID)
 }
 
+func TestCreateRecipe_WithSource(t *testing.T) {
+	ensureTestUser(t)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", "test.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	part.Write([]byte("fake image data"))
+	writer.Close()
+
+	source := "cookbook"
+	req := httptest.NewRequest("POST", "/api/recipes?email="+testEmail+"&name=SourceRecipe&source="+url.QueryEscape(source), body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	CreateRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var response models.UploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response.Recipe.Source == nil || *response.Recipe.Source != source {
+		t.Fatalf("Expected source %q, got %v", source, response.Recipe.Source)
+	}
+
+	storage.DeleteRecipe(response.Recipe.UUID)
+}
+
 func TestCreateRecipe_MultipleFiles(t *testing.T) {
 	ensureTestUser(t)
 
@@ -325,7 +366,7 @@ func TestUpdateRecipeSteps_InvalidIngredient(t *testing.T) {
 	ensureTestUser(t)
 
 	// Create a recipe first
-	recipe, err := storage.InsertRecipeByEmail("steps-invalid-ing-test", testEmail)
+	recipe, err := storage.InsertRecipeByEmail("steps-invalid-ing-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -351,7 +392,7 @@ func TestUpdateRecipeSteps_ValidRequest(t *testing.T) {
 	ensureTestUser(t)
 
 	// Create a recipe first
-	recipe, err := storage.InsertRecipeByEmail("steps-valid-test", testEmail)
+	recipe, err := storage.InsertRecipeByEmail("steps-valid-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -463,7 +504,7 @@ func TestUpdateRecipeSteps_RoundTrip(t *testing.T) {
 	ensureTestUser(t)
 
 	// Create a recipe
-	recipe, err := storage.InsertRecipeByEmail("steps-roundtrip-test", testEmail)
+	recipe, err := storage.InsertRecipeByEmail("steps-roundtrip-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -592,7 +633,7 @@ func TestAddRecipeFiles_RecipeNotFound(t *testing.T) {
 func TestAddRecipeFiles_MissingFile(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := storage.InsertRecipeByEmail("add-files-missing-file", testEmail)
+	recipe, err := storage.InsertRecipeByEmail("add-files-missing-file", testEmail, nil)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -619,7 +660,7 @@ func TestAddRecipeFiles_MissingFile(t *testing.T) {
 func TestAddRecipeFiles_Success(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := storage.InsertRecipeByEmail("add-files-success", testEmail)
+	recipe, err := storage.InsertRecipeByEmail("add-files-success", testEmail, nil)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -729,7 +770,7 @@ func TestPatchRecipe_RecipeNotFound(t *testing.T) {
 func TestPatchRecipe_InvalidBody(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := storage.InsertRecipeByEmail("patch-invalid-body-test", testEmail)
+	recipe, err := storage.InsertRecipeByEmail("patch-invalid-body-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("Failed to create test recipe: %v", err)
 	}
@@ -747,6 +788,35 @@ func TestPatchRecipe_InvalidBody(t *testing.T) {
 
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestPatchRecipe_SourceUpdate(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("patch-source-test", testEmail, nil)
+	if err != nil {
+		t.Fatalf("InsertRecipeByEmail failed: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	patchBody := `{"source":"newsletter"}`
+	patchReq := httptest.NewRequest("PATCH", "/api/recipes/"+recipe.UUID.String(), strings.NewReader(patchBody))
+	patchW := httptest.NewRecorder()
+
+	PatchRecipe(patchW, patchReq)
+
+	if patchW.Result().StatusCode != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", patchW.Result().StatusCode)
+	}
+
+	updatedRecipe, err := storage.GetRecipeByUUID(recipe.UUID)
+	if err != nil {
+		t.Fatalf("GetRecipeByUUID failed: %v", err)
+	}
+
+	if updatedRecipe.Source == nil || *updatedRecipe.Source != "newsletter" {
+		t.Fatalf("Expected source 'newsletter', got %v", updatedRecipe.Source)
 	}
 }
 

@@ -80,7 +80,7 @@ func TestGetRecipesByUserEmail(t *testing.T) {
 func TestInsertRecipeByEmail(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("test-recipe", testEmail)
+	recipe, err := InsertRecipeByEmail("test-recipe", testEmail, nil)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -94,12 +94,38 @@ func TestInsertRecipeByEmail(t *testing.T) {
 	if recipe.UUID == uuid.Nil {
 		t.Error("Expected non-nil UUID")
 	}
+	if recipe.Source != nil {
+		t.Errorf("Expected nil source, got %v", recipe.Source)
+	}
+}
+
+func TestInsertRecipeByEmail_WithSource(t *testing.T) {
+	ensureTestUser(t)
+
+	source := "website"
+	recipe, err := InsertRecipeByEmail("source-recipe", testEmail, &source)
+	if err != nil {
+		t.Fatalf("InsertRecipeByEmail failed: %v", err)
+	}
+
+	if recipe.Source == nil || *recipe.Source != source {
+		t.Fatalf("Expected source %q, got %v", source, recipe.Source)
+	}
+
+	found, err := GetRecipeByUUID(recipe.UUID)
+	if err != nil {
+		t.Fatalf("GetRecipeByUUID failed: %v", err)
+	}
+
+	if found.Source == nil || *found.Source != source {
+		t.Fatalf("Expected source %q from GetRecipeByUUID, got %v", source, found.Source)
+	}
 }
 
 func TestInsertAndGetFile(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("file-test", testEmail)
+	recipe, err := InsertRecipeByEmail("file-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -164,7 +190,7 @@ func TestUpsertTag(t *testing.T) {
 func TestMultipleFilesPerRecipe(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("multi-file-test", testEmail)
+	recipe, err := InsertRecipeByEmail("multi-file-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -191,7 +217,7 @@ func TestMultipleFilesPerRecipe(t *testing.T) {
 func TestDeleteRecipe(t *testing.T) {
 	ensureTestUser(t)
 
-	recipe, err := InsertRecipeByEmail("delete-test", testEmail)
+	recipe, err := InsertRecipeByEmail("delete-test", testEmail, nil)
 	if err != nil {
 		t.Fatalf("InsertRecipeByEmail failed: %v", err)
 	}
@@ -236,7 +262,7 @@ func TestTransactionCommit(t *testing.T) {
 	}
 
 	// Insert recipe in transaction
-	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-commit-test", testEmail)
+	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-commit-test", testEmail, nil)
 	if err != nil {
 		tx.Rollback(ctx)
 		t.Fatalf("TxInsertRecipeByEmail failed: %v", err)
@@ -301,7 +327,7 @@ func TestTransactionRollback(t *testing.T) {
 	}
 
 	// Insert recipe in transaction
-	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-rollback-test", testEmail)
+	recipe, err := TxInsertRecipeByEmail(ctx, tx, "tx-rollback-test", testEmail, nil)
 	if err != nil {
 		tx.Rollback(ctx)
 		t.Fatalf("TxInsertRecipeByEmail failed: %v", err)
