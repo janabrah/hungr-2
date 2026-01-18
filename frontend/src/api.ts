@@ -80,6 +80,21 @@ export async function deleteRecipe(recipeUUID: UUID): Promise<void> {
   }
 }
 
+export async function patchRecipe(recipeUUID: UUID, tagString: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tagString }),
+  })
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as {
+      error?: string
+    }
+    throw new Error(data.error ?? `Failed to update recipe: ${response.status.toString()}`)
+  }
+}
+
 export async function getRecipeSteps(recipeUUID: UUID): Promise<RecipeStepsResponse> {
   const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}/steps`)
   if (!response.ok) {

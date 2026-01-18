@@ -5,6 +5,7 @@ import {
   deleteRecipe,
   getRecipeSteps,
   updateRecipeSteps,
+  patchRecipe,
   getFriendlyErrorMessage,
 } from '../api'
 import { Button } from '../components/Button'
@@ -12,6 +13,7 @@ import { Header } from '../components/Header'
 import { RecipeSteps } from '../components/RecipeSteps'
 import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
 import { RecipeSelect } from '../components/RecipeSelect'
+import { TagEditor } from '../components/TagEditor'
 import { TagFilter } from '../components/TagFilter'
 import type { Recipe, File, RecipeStepResponse as RecipeStep } from '../types.gen'
 import { asUUID, type Email } from '../branded'
@@ -55,6 +57,8 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   const [loadingSteps, setLoadingSteps] = useState(false)
   const [editingSteps, setEditingSteps] = useState(false)
   const [savingSteps, setSavingSteps] = useState(false)
+  const [editingTags, setEditingTags] = useState(false)
+  const [savingTags, setSavingTags] = useState(false)
 
   useEffect(() => {
     getRecipes(email)
@@ -84,10 +88,12 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
     if (selectedRecipeId === '') {
       setSteps([])
       setEditingSteps(false)
+      setEditingTags(false)
       return
     }
     setLoadingSteps(true)
     setEditingSteps(false)
+    setEditingTags(false)
     getRecipeSteps(asUUID(selectedRecipeId))
       .then((response) => {
         setSteps(response.steps)
@@ -110,6 +116,21 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
       setError(getFriendlyErrorMessage(err, 'Failed to save steps'))
     } finally {
       setSavingSteps(false)
+    }
+  }
+
+  const handleSaveTags = async (newTags: string) => {
+    setSavingTags(true)
+    try {
+      await patchRecipe(asUUID(selectedRecipeId), newTags)
+      setRecipes((prev) =>
+        prev.map((r) => (r.uuid === selectedRecipeId ? { ...r, tag_string: newTags } : r)),
+      )
+      setEditingTags(false)
+    } catch (err: unknown) {
+      setError(getFriendlyErrorMessage(err, 'Failed to save tags'))
+    } finally {
+      setSavingTags(false)
     }
   }
 
@@ -175,7 +196,27 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
                 {deleting ? 'Deleting...' : 'Delete'}
               </Button>
             </div>
-            <p>Tags: {selectedRecipe.tag_string}</p>
+            {editingTags ? (
+              <TagEditor
+                initialTags={selectedRecipe.tag_string}
+                onSave={handleSaveTags}
+                onCancel={() => {
+                  setEditingTags(false)
+                }}
+                saving={savingTags}
+              />
+            ) : (
+              <div className="flex-row" style={{ alignItems: 'center', gap: '1rem' }}>
+                <p style={{ margin: 0 }}>Tags: {selectedRecipe.tag_string || 'None'}</p>
+                <Button
+                  onClick={() => {
+                    setEditingTags(true)
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
+            )}
             <div
               className="flex-row"
               style={{ alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}
