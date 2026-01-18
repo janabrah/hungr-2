@@ -111,6 +111,62 @@ export function TagsDisplay({ tags, onEdit }: TagsDisplayProps) {
   )
 }
 
+type SourceDisplayProps = {
+  source: string | null
+  onEdit: () => void
+}
+
+export function SourceDisplay({ source, onEdit }: SourceDisplayProps) {
+  return (
+    <InlineRow>
+      <p style={{ margin: 0 }}>Source: {source || 'None'}</p>
+      <Button
+        onClick={onEdit}
+        variant="secondary"
+        icon={Icon.Pencil}
+        showText={false}
+        aria-label="Edit source"
+      >
+        Edit
+      </Button>
+    </InlineRow>
+  )
+}
+
+type SourceEditorProps = {
+  initialSource: string
+  onSave: (nextSource: string) => Promise<void>
+  onCancel: () => void
+  saving: boolean
+}
+
+export function SourceEditor({ initialSource, onSave, onCancel, saving }: SourceEditorProps) {
+  const [source, setSource] = useState(initialSource)
+  const handleSave = () => {
+    void onSave(source)
+  }
+
+  return (
+    <div className="flex-row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+      <input
+        type="text"
+        placeholder="Source (URL, cookbook, etc.)"
+        className="input"
+        value={source}
+        onChange={(event) => {
+          setSource(event.target.value)
+        }}
+      />
+      <Button onClick={handleSave} disabled={saving}>
+        {saving ? 'Saving...' : 'Save'}
+      </Button>
+      <Button variant="secondary" onClick={onCancel} disabled={saving}>
+        Cancel
+      </Button>
+    </div>
+  )
+}
+
 type StepsHeaderProps = {
   canEdit: boolean
   onEdit: () => void
@@ -155,51 +211,90 @@ export function RecipeImages({ name, files }: RecipeImagesProps) {
   )
 }
 
-type RecipeTagsSectionProps = {
+type RecipeMetaSectionProps = {
   selectedRecipeId: string
   tags: string
+  source: string | null
   onError: (message: string) => void
   refetch: () => void
 }
 
-export function RecipeTagsSection({
+export function RecipeMetaSection({
   selectedRecipeId,
   tags,
+  source,
   onError,
   refetch,
-}: RecipeTagsSectionProps) {
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
+}: RecipeMetaSectionProps) {
+  const [editingTags, setEditingTags] = useState(false)
+  const [editingSource, setEditingSource] = useState(false)
+  const [savingTags, setSavingTags] = useState(false)
+  const [savingSource, setSavingSource] = useState(false)
 
   const handleSave = async (nextTags: string) => {
-    setSaving(true)
+    setSavingTags(true)
     try {
       await patchRecipe(asUUID(selectedRecipeId), nextTags)
       refetch()
-      setEditing(false)
+      setEditingTags(false)
     } catch (err: unknown) {
       onError(getFriendlyErrorMessage(err, 'Failed to save tags'))
     } finally {
-      setSaving(false)
+      setSavingTags(false)
     }
   }
 
-  return editing ? (
-    <TagEditor
-      initialTags={tags}
-      onSave={handleSave}
-      onCancel={() => {
-        setEditing(false)
-      }}
-      saving={saving}
-    />
-  ) : (
-    <TagsDisplay
-      tags={tags}
-      onEdit={() => {
-        setEditing(true)
-      }}
-    />
+  const handleSourceSave = async (nextSource: string) => {
+    setSavingSource(true)
+    try {
+      await patchRecipe(asUUID(selectedRecipeId), tags, nextSource)
+      refetch()
+      setEditingSource(false)
+    } catch (err: unknown) {
+      onError(getFriendlyErrorMessage(err, 'Failed to save source'))
+    } finally {
+      setSavingSource(false)
+    }
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: '0.75rem' }}>
+      {editingTags ? (
+        <TagEditor
+          initialTags={tags}
+          onSave={handleSave}
+          onCancel={() => {
+            setEditingTags(false)
+          }}
+          saving={savingTags}
+        />
+      ) : (
+        <TagsDisplay
+          tags={tags}
+          onEdit={() => {
+            setEditingTags(true)
+          }}
+        />
+      )}
+
+      {editingSource ? (
+        <SourceEditor
+          initialSource={source ?? ''}
+          onSave={handleSourceSave}
+          onCancel={() => {
+            setEditingSource(false)
+          }}
+          saving={savingSource}
+        />
+      ) : (
+        <SourceDisplay
+          source={source}
+          onEdit={() => {
+            setEditingSource(true)
+          }}
+        />
+      )}
+    </div>
   )
 }
 

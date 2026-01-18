@@ -73,6 +73,7 @@ export interface Recipe {
   user_uuid: string
   owner_email: string
   tag_string: string
+  source: string | null
   created_at: string
 }
 export interface File {
@@ -104,6 +105,7 @@ export interface TagsResponse {
 }
 export interface PatchRecipeRequest {
   tagString: string
+  source?: string | null
 }
 
 //////////
