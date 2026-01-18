@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Home } from './pages/Home'
 import { AddRecipe } from './pages/AddRecipe'
 import { Browse } from './pages/Browse'
@@ -7,6 +7,7 @@ import { Login } from './pages/Login'
 import { getEmail } from './auth'
 import type { Email } from './branded'
 import type { Page } from './types'
+import { usePopState } from './hooks/usePopState'
 
 function getPageFromPath(): Page {
   const path = window.location.pathname
@@ -22,15 +23,9 @@ function App() {
   const [page, setPage] = useState<Page>(getPageFromPath)
   const [email, setEmailState] = useState<Email | null>(getEmail)
 
-  useEffect(() => {
-    const handlePopState = () => {
-      setPage(getPageFromPath())
-    }
-    window.addEventListener('popstate', handlePopState)
-    return () => {
-      window.removeEventListener('popstate', handlePopState)
-    }
-  }, [])
+  usePopState(() => {
+    setPage(getPageFromPath())
+  })
 
   const navigate = (newPage: Page) => {
     const path = newPage === 'home' ? '/' : `/${newPage}`

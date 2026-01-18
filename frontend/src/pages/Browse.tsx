@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
-  getRecipes,
   getFileURL,
   deleteRecipe,
-  getRecipeSteps,
   updateRecipeSteps,
   patchRecipe,
   getFriendlyErrorMessage,
@@ -15,17 +13,17 @@ import { RecipeStepsEditor } from '../components/RecipeStepsEditor'
 import { RecipeSelect } from '../components/RecipeSelect'
 import { TagEditor } from '../components/TagEditor'
 import { TagFilter } from '../components/TagFilter'
-import type { Recipe, File, RecipeStepResponse as RecipeStep } from '../types.gen'
+import type { RecipeStepResponse as RecipeStep } from '../types.gen'
 import { asUUID, type Email } from '../branded'
 import type { Page } from '../types'
+import { useRecipeSteps } from '../hooks/useRecipeSteps'
+import { useRecipesWithFiles, type RecipeWithFiles } from '../hooks/useRecipesWithFiles'
 
 type Props = {
   email: Email
   currentPage: Page
   onNavigate: (page: Page) => void
 }
-
-type RecipeWithFiles = Recipe & { files: File[] }
 
 function getParams(): { tags: string[]; recipe: string } {
   const params = new URLSearchParams(window.location.search)
@@ -60,51 +58,15 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
   const [editingTags, setEditingTags] = useState(false)
   const [savingTags, setSavingTags] = useState(false)
 
-  useEffect(() => {
-    getRecipes(email)
-      .then((response) => {
-        const fileData = response.fileData
-        const recipesWithFiles = response.recipeData.map((recipe) => ({
-          ...recipe,
-          files: fileData
-            .filter((f) => f.recipe_uuid === recipe.uuid)
-            .sort((a, b) => a.page_number - b.page_number),
-        }))
-        setRecipes(recipesWithFiles)
-      })
-      .catch((err: unknown) => {
-        setError(getFriendlyErrorMessage(err, 'Failed to load recipes'))
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [email])
+  useRecipesWithFiles({ email, setRecipes, setLoading, setError })
 
-  useEffect(() => {
-    setParams(tagFilter, selectedRecipeId)
-  }, [tagFilter, selectedRecipeId])
-
-  useEffect(() => {
-    if (selectedRecipeId === '') {
-      setSteps([])
-      setEditingSteps(false)
-      setEditingTags(false)
-      return
-    }
-    setLoadingSteps(true)
-    setEditingSteps(false)
-    setEditingTags(false)
-    getRecipeSteps(asUUID(selectedRecipeId))
-      .then((response) => {
-        setSteps(response.steps)
-      })
-      .catch(() => {
-        setSteps([])
-      })
-      .finally(() => {
-        setLoadingSteps(false)
-      })
-  }, [selectedRecipeId])
+  useRecipeSteps({
+    selectedRecipeId,
+    setSteps,
+    setLoadingSteps,
+    setEditingSteps,
+    setEditingTags,
+  })
 
   const handleSaveSteps = async (newSteps: RecipeStep[]) => {
     setSavingSteps(true)
@@ -145,6 +107,12 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
 
   const handleRecipeSelect = (recipeId: string) => {
     setSelectedRecipeId(recipeId)
+    setParams(tagFilter, recipeId)
+  }
+
+  const handleTagFilterChange = (tags: string[]) => {
+    setTagFilter(tags)
+    setParams(tags, selectedRecipeId)
   }
 
   const handleDelete = () => {
@@ -156,6 +124,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
       .then(() => {
         setRecipes((prev) => prev.filter((r) => r.uuid !== selectedRecipeId))
         setSelectedRecipeId('')
+        setParams(tagFilter, '')
       })
       .catch((err: unknown) => {
         setError(getFriendlyErrorMessage(err, 'Failed to delete recipe'))
@@ -174,7 +143,7 @@ export function Browse({ email, currentPage, onNavigate }: Props) {
         {error !== null && <p className="error">{error}</p>}
 
         <div className="flex-row" style={{ marginBottom: '1rem' }}>
-          <TagFilter value={tagFilter} onChange={setTagFilter} />
+          <TagFilter value={tagFilter} onChange={handleTagFilterChange} />
         </div>
 
         {loading ? (

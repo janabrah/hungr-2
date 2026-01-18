@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Email } from '../branded'
 import type { Recipe, File } from '../types.gen'
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick'
 
 type RecipeWithFiles = Recipe & { files: File[] }
 
@@ -20,21 +21,9 @@ export function RecipeSelect({
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current !== null &&
-        event.target instanceof Node &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
+  useCloseOnOutsideClick(containerRef, () => {
+    setOpen(false)
+  })
 
   const selectedRecipe = recipes.find((recipe) => recipe.uuid === selectedRecipeId) ?? null
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   createConnection,
   deleteConnection,
@@ -12,6 +12,7 @@ import { FriendsList, FriendsSection, MutedText } from '../components/Friends'
 import { asEmail, asUUID, isEmail, type Email, type UUID } from '../branded'
 import type { Page } from '../types'
 import type { User } from '../types.gen'
+import { useConnections } from '../hooks/useConnections'
 
 type Props = {
   email: Email
@@ -31,31 +32,22 @@ export function Friends({ email, currentPage, onNavigate }: Props) {
   const [accepting, setAccepting] = useState<Record<string, boolean>>({})
   const [deleting, setDeleting] = useState<Record<string, boolean>>({})
 
-  const loadConnections = async (userUUID: UUID) => {
+  const loadConnections = useCallback(async (userUUID: UUID) => {
     const [outgoingConnections, incomingConnections] = await Promise.all([
       getConnections(userUUID, 'outgoing'),
       getConnections(userUUID, 'incoming'),
     ])
     setOutgoing(outgoingConnections)
     setIncoming(incomingConnections)
-  }
+  }, [])
 
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-
-    getUserByEmail(email)
-      .then((currentUser) => {
-        setUser(currentUser)
-        return loadConnections(asUUID(currentUser.uuid))
-      })
-      .catch((err: unknown) => {
-        setError(getFriendlyErrorMessage(err, 'Failed to load connections'))
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [email])
+  useConnections({
+    email,
+    loadConnections,
+    setUser,
+    setLoading,
+    setError,
+  })
 
   const { mutual, outgoingOnly, incomingOnly } = useMemo(() => {
     const incomingIds = new Set(incoming.map((u) => u.uuid))

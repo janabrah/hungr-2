@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
-import { getTags } from '../api'
-import type { Tag } from '../types.gen'
+import { useState, useRef } from 'react'
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick'
+import { useTags } from '../hooks/useTags'
 
 type Props = {
   value: string[]
@@ -8,47 +8,15 @@ type Props = {
 }
 
 export function TagFilter({ value, onChange }: Props) {
-  const [tags, setTags] = useState<Tag[]>([])
-  const [loading, setLoading] = useState(true)
+  const { tags, loading } = useTags()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    getTags()
-      .then(setTags)
-      .catch(() => {
-        // Ignore - will just show empty list
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [])
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target
-      if (
-        containerRef.current &&
-        target instanceof Node &&
-        !containerRef.current.contains(target)
-      ) {
-        setOpen(false)
-        setSearch('')
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (open && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [open])
+  useCloseOnOutsideClick(containerRef, () => {
+    setOpen(false)
+    setSearch('')
+  })
 
   const toggleTag = (tagName: string) => {
     if (value.includes(tagName)) {
@@ -125,9 +93,9 @@ export function TagFilter({ value, onChange }: Props) {
             }}
           >
             <input
-              ref={inputRef}
               type="text"
               placeholder="Search tags..."
+              autoFocus
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
