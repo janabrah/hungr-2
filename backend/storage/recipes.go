@@ -9,25 +9,35 @@ import (
 
 const (
 	queryGetRecipeByUUID = `
-		SELECT r.uuid, r.name, r.user_uuid, r.tag_string, r.created_at, u.email
+		SELECT r.uuid, r.name, r.user_uuid,
+		       COALESCE(STRING_AGG(t.name, ', '), '') as tag_string,
+		       r.created_at, u.email
 		FROM recipes r
 		JOIN users u ON r.user_uuid = u.uuid
-		WHERE r.uuid = $1`
+		LEFT JOIN recipe_tags rt ON r.uuid = rt.recipe_uuid
+		LEFT JOIN tags t ON rt.tag_uuid = t.uuid
+		WHERE r.uuid = $1
+		GROUP BY r.uuid, r.name, r.user_uuid, r.created_at, u.email`
 
 	queryGetRecipesByUserEmail = `
 		WITH viewer AS (
 			SELECT uuid FROM users WHERE email = $1
 		)
-		SELECT r.uuid, r.name, r.user_uuid, r.tag_string, r.created_at, u.email
+		SELECT r.uuid, r.name, r.user_uuid,
+		       COALESCE(STRING_AGG(t.name, ', '), '') as tag_string,
+		       r.created_at, u.email
 		FROM recipes r
 		JOIN users u ON r.user_uuid = u.uuid
 		JOIN viewer v ON true
+		LEFT JOIN recipe_tags rt ON r.uuid = rt.recipe_uuid
+		LEFT JOIN tags t ON rt.tag_uuid = t.uuid
 		WHERE r.user_uuid = v.uuid
 			OR EXISTS (
 				SELECT 1 FROM user_connections uc
 				WHERE uc.source_user_uuid = r.user_uuid
 					AND uc.target_user_uuid = v.uuid
 			)
+		GROUP BY r.uuid, r.name, r.user_uuid, r.created_at, u.email
 		ORDER BY r.created_at DESC LIMIT 100`
 
 	queryInsertRecipeByEmail = `

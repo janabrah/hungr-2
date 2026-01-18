@@ -21,6 +21,12 @@ const (
 
 	queryGetAllTags = `
 		SELECT uuid, name FROM tags ORDER BY name`
+
+	queryGetTagsByRecipeUUID = `
+		SELECT t.uuid, t.name FROM tags t
+		JOIN recipe_tags rt ON rt.tag_uuid = t.uuid
+		WHERE rt.recipe_uuid = $1
+		ORDER BY t.name`
 )
 
 func UpsertTag(tagUUID uuid.UUID, name string) (*models.Tag, error) {
@@ -60,6 +66,24 @@ func CreateTagUUID(tag string) uuid.UUID {
 
 func GetAllTags() ([]models.Tag, error) {
 	rows, err := db.Query(context.Background(), queryGetAllTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []models.Tag
+	for rows.Next() {
+		var t models.Tag
+		if err := rows.Scan(&t.UUID, &t.Name); err != nil {
+			return nil, err
+		}
+		tags = append(tags, t)
+	}
+	return tags, rows.Err()
+}
+
+func GetTagsByRecipeUUID(recipeUUID uuid.UUID) ([]models.Tag, error) {
+	rows, err := db.Query(context.Background(), queryGetTagsByRecipeUUID, recipeUUID)
 	if err != nil {
 		return nil, err
 	}
