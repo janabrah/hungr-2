@@ -20,6 +20,8 @@ export const isNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 export const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(isString)
+export const isNullableString = (value: unknown): value is string | null =>
+  value === null || isString(value)
 
 export const isRecipe = (value: unknown): value is RecipesResponse['recipeData'][number] =>
   isRecord(value) &&
@@ -28,6 +30,7 @@ export const isRecipe = (value: unknown): value is RecipesResponse['recipeData']
   isString(value['user_uuid']) &&
   isString(value['owner_email']) &&
   isString(value['tag_string']) &&
+  isNullableString(value['source']) &&
   isString(value['created_at'])
 
 export const isFile = (value: unknown): value is RecipesResponse['fileData'][number] =>

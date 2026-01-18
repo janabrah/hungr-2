@@ -37,6 +37,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
   const [selectedRecipeId, setSelectedRecipeId] = useState('')
   const [newRecipeName, setNewRecipeName] = useState('')
   const [newRecipeTags, setNewRecipeTags] = useState('')
+  const [newRecipeSource, setNewRecipeSource] = useState('')
 
   // Shared state
   const [submitting, setSubmitting] = useState(false)
@@ -97,6 +98,9 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       .then((response) => {
         setSteps(response.steps)
         setNewRecipeTags(response.tags.join(', '))
+        if (inputMode === 'url' && newRecipeSource === '') {
+          setNewRecipeSource(url)
+        }
       })
       .catch((err: unknown) => {
         setError(getFriendlyErrorMessage(err, 'Failed to extract recipe'))
@@ -134,7 +138,14 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
     try {
       // Include images when saving from image import mode
       const filesToUpload = inputMode === 'image' ? imageFiles : []
-      const response = await createRecipe(email, newRecipeName, newRecipeTags, filesToUpload)
+      const sourceParam = newRecipeSource.trim()
+      const response = await createRecipe(
+        email,
+        newRecipeName,
+        newRecipeTags,
+        sourceParam === '' ? undefined : sourceParam,
+        filesToUpload,
+      )
       if (steps.length > 0) {
         await updateRecipeSteps(asUUID(response.recipe.uuid), steps)
       }
@@ -145,6 +156,7 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
       clearAllImages()
       setNewRecipeName('')
       setNewRecipeTags('')
+      setNewRecipeSource('')
     } catch (err: unknown) {
       setError(getFriendlyErrorMessage(err, 'Failed to create recipe'))
     } finally {
@@ -399,15 +411,28 @@ export function AddRecipe({ email, currentPage, onNavigate }: Props) {
                   setNewRecipeName(e.target.value)
                 }}
               />
-              <input
-                type="text"
-                placeholder="Tags (comma separated)"
-                className="input"
-                value={newRecipeTags}
-                onChange={(e) => {
-                  setNewRecipeTags(e.target.value)
-                }}
-              />
+              <div className="flex-row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Tags (comma separated)"
+                  className="input"
+                  style={{ flex: '1 1 220px' }}
+                  value={newRecipeTags}
+                  onChange={(e) => {
+                    setNewRecipeTags(e.target.value)
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Source (URL, cookbook, etc.)"
+                  className="input"
+                  style={{ flex: '1 1 220px' }}
+                  value={newRecipeSource}
+                  onChange={(e) => {
+                    setNewRecipeSource(e.target.value)
+                  }}
+                />
+              </div>
               <Button
                 onClick={() => {
                   void handleSaveAsNew()

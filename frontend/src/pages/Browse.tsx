@@ -10,7 +10,7 @@ import {
   SelectedRecipeSection,
   RecipeHeader,
   RecipeImages,
-  RecipeTagsSection,
+  RecipeMetaSection,
   RecipeStepsSection,
   RecipeAddPhotos,
   TagFilterSection,
@@ -99,10 +99,11 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
         {selectedRecipe && (
           <SelectedRecipeSection>
             <RecipeHeader name={selectedRecipe.name} deleting={deleting} onDelete={handleDelete} />
-            <RecipeTagsSection
+            <RecipeMetaSection
               key={`tags-${selectedRecipe.uuid}`}
               selectedRecipeId={selectedRecipe.uuid}
               tags={selectedRecipe.tag_string}
+              source={selectedRecipe.source}
               onError={setError}
               refetch={refetch}
             />

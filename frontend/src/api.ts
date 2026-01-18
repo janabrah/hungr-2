@@ -70,6 +70,7 @@ export async function createRecipe(
   email: Email,
   name: string,
   tagString: string,
+  source: string | undefined,
   files: FileList | File[],
 ): Promise<UploadResponse> {
   const formData = new FormData()
@@ -82,6 +83,9 @@ export async function createRecipe(
     name,
     tagString,
   })
+  if (source !== undefined) {
+    params.set('source', source)
+  }
 
   const response = await fetch(`${API_BASE}/api/recipes?${params.toString()}`, {
     method: 'POST',
@@ -137,11 +141,19 @@ export async function deleteRecipe(recipeUUID: UUID): Promise<void> {
   }
 }
 
-export async function patchRecipe(recipeUUID: UUID, tagString: string): Promise<void> {
+export async function patchRecipe(
+  recipeUUID: UUID,
+  tagString: string,
+  source?: string,
+): Promise<void> {
+  const payload: { tagString: string; source?: string } = { tagString }
+  if (source !== undefined) {
+    payload.source = source
+  }
   const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tagString }),
+    body: JSON.stringify(payload),
   })
 
   if (!response.ok) {
