@@ -18,6 +18,7 @@ import type { RecipeWithFiles } from '../hooks/useRecipesWithFiles'
 import { asUUID } from '../branded'
 import type { RecipeStepResponse as RecipeStep } from '../types.gen'
 import { useRecipeSteps } from '../hooks/useRecipeSteps'
+import { useEscapeKey } from '../hooks/useEscapeKey'
 
 export function BrowseLayout({ children }: { children: ReactNode }) {
   return <div className="container">{children}</div>
@@ -156,6 +157,18 @@ export function SourceEditor({ initialSource, onSave, onCancel, saving }: Source
         onChange={(event) => {
           setSource(event.target.value)
         }}
+        onKeyDown={(event) => {
+          if (saving) return
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            onCancel()
+            return
+          }
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            handleSave()
+          }
+        }}
       />
       <Button onClick={handleSave} disabled={saving}>
         {saving ? 'Saving...' : 'Save'}
@@ -230,6 +243,16 @@ export function RecipeMetaSection({
   const [editingSource, setEditingSource] = useState(false)
   const [savingTags, setSavingTags] = useState(false)
   const [savingSource, setSavingSource] = useState(false)
+
+  useEscapeKey((editingTags || editingSource) && !savingTags && !savingSource, () => {
+    if (editingTags) {
+      setEditingTags(false)
+      return
+    }
+    if (editingSource) {
+      setEditingSource(false)
+    }
+  })
 
   const handleSave = async (nextTags: string) => {
     setSavingTags(true)
@@ -313,6 +336,10 @@ export function RecipeStepsSection({
   const [saving, setSaving] = useState(false)
   const [steps, setSteps] = useState<RecipeStep[]>([])
   const [loading, setLoading] = useState(false)
+
+  useEscapeKey(editing && !saving, () => {
+    setEditing(false)
+  })
 
   useRecipeSteps({
     selectedRecipeId,

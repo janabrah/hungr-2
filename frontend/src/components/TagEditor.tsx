@@ -31,6 +31,18 @@ export function TagEditor({ initialTags, onSave, onCancel, saving }: Props) {
         onChange={(e) => {
           setTags(e.target.value)
         }}
+        onKeyDown={(e) => {
+          if (saving) return
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            onCancel()
+            return
+          }
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            handleSave()
+          }
+        }}
         disabled={saving}
       />
       <Stack direction="row">

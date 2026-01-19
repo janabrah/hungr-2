@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { Button, IconButton } from './Button'
 import type { RecipeStepResponse as RecipeStep } from '../types.gen'
 
@@ -53,6 +54,20 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
     void onSave(stepsWithParsedIngredients)
   }
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (saving) return
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      onCancel()
+      return
+    }
+    if (event.key === 'Enter') {
+      if (event.currentTarget instanceof HTMLTextAreaElement && event.shiftKey) return
+      event.preventDefault()
+      handleSave()
+    }
+  }
+
   return (
     <div className="recipe-steps-editor">
       {steps.map((step, index) => (
@@ -75,6 +90,7 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
             onChange={(e) => {
               updateInstruction(index, e.target.value)
             }}
+            onKeyDown={handleKeyDown}
             disabled={saving}
             rows={2}
           />
@@ -86,6 +102,7 @@ export function RecipeStepsEditor({ steps: initialSteps, onSave, onCancel, savin
             onChange={(e) => {
               updateIngredientInput(index, e.target.value)
             }}
+            onKeyDown={handleKeyDown}
             disabled={saving}
           />
           <span className="recipe-step-help">Separate ingredients with semicolons</span>
