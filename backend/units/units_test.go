@@ -64,6 +64,8 @@ func TestParseIngredientString_Fractions(t *testing.T) {
 		{"3/4 cup milk", 0.75},
 		{"1/3 cup water", 1.0 / 3.0},
 		{"2/3 cup broth", 2.0 / 3.0},
+		{"1/3 tsp pepper", 1.0 / 3.0},
+		{"2/3 tsp paprika", 2.0 / 3.0},
 	}
 
 	for _, tt := range tests {
@@ -192,15 +194,19 @@ func TestFindBestIntegerUnit_FractionalUnits(t *testing.T) {
 	}{
 		// Fractional teaspoons
 		{"half teaspoon", 2.46446, "half_tsp", 1},
+		{"third teaspoon", 1.64297, "third_tsp", 1},
 		{"quarter teaspoon", 1.23223, "qtr_tsp", 1},
 		{"eighth teaspoon", 0.616115, "eighth_tsp", 1},
 		{"two half teaspoons", 4.92892, "tsp", 1},
+		{"two third teaspoons", 3.28594, "third_tsp", 2},
 		{"two quarter teaspoons", 2.46446, "half_tsp", 1},
 		{"three eighth teaspoons", 1.848345, "eighth_tsp", 3},
 		// Fractional cups
 		{"half cup", 118.294, "half_cup", 1},
+		{"third cup", 78.8627, "third_cup", 1},
 		{"quarter cup", 59.147, "qtr_cup", 1},
 		{"two half cups", 236.588, "cup", 1},
+		{"two third cups", 157.7254, "third_cup", 2},
 		{"two quarter cups", 118.294, "half_cup", 1},
 		{"three quarter cups", 177.441, "qtr_cup", 3},
 	}
@@ -213,6 +219,34 @@ func TestFindBestIntegerUnit_FractionalUnits(t *testing.T) {
 			}
 			if q.Value != tt.expectedVal {
 				t.Errorf("Value: got %v, want %v", q.Value, tt.expectedVal)
+			}
+		})
+	}
+}
+
+func TestParseUnit_ThirdUnits(t *testing.T) {
+	tests := []struct {
+		input    string
+		unit     string
+		category UnitCategory
+	}{
+		{"1/3 tsp", "third_tsp", CategoryVolume},
+		{"⅓ tsp", "third_tsp", CategoryVolume},
+		{"1/3 cup", "third_cup", CategoryVolume},
+		{"⅓ cup", "third_cup", CategoryVolume},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			unit, category, err := ParseUnit(tt.input)
+			if err != nil {
+				t.Fatalf("ParseUnit(%q) returned error: %v", tt.input, err)
+			}
+			if unit != tt.unit {
+				t.Errorf("Unit: got %q, want %q", unit, tt.unit)
+			}
+			if category != tt.category {
+				t.Errorf("Category: got %q, want %q", category, tt.category)
 			}
 		})
 	}
