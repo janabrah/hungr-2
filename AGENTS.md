@@ -21,7 +21,10 @@
   - `npx playwright test` runs E2E tests in `frontend/e2e/`.
 
 ## Full Repo Checks
-- After completing edits, run the root script: `./run-all.sh` (using `bash run-all.sh`).
+- After completing any code edits, always run the root script: `./run-all.sh` (using `bash run-all.sh`) without waiting for a prompt. If sandbox approval is required, request it immediately.
+
+## Response Checklist (Required)
+- Tests run: `bash run-all.sh` (always required after code changes). If it could not be run, state why and request approval.
 
 ## Coding Style & Naming Conventions
 - Go code is formatted with `gofmt`; keep handler logic in `handlers/` and DB access in `storage/`.
