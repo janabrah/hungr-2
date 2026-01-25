@@ -51,7 +51,7 @@ function App() {
 
   // Recipe page is publicly accessible (no auth required)
   if (page === 'recipe' && recipeId !== null) {
-    return <Recipe recipeId={recipeId} />
+    return <Recipe recipeId={recipeId} email={email} onNavigate={navigate} />
   }
 
   if (email === null) {
