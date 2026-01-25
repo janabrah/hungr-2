@@ -78,6 +78,15 @@ func handleRecipeSubresources(w http.ResponseWriter, r *http.Request) {
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
+	} else if strings.HasSuffix(r.URL.Path, "/public") {
+		switch r.Method {
+		case "GET":
+			handlers.GetPublicRecipe(w, r)
+		case "POST":
+			handlers.SetRecipePublic(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	} else if r.Method == "PATCH" {
 		handlers.PatchRecipe(w, r)
 	} else {

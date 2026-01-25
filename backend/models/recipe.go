@@ -13,6 +13,7 @@ type Recipe struct {
 	OwnerEmail string    `json:"owner_email"`
 	TagString  string    `json:"tag_string"`
 	Source     *string   `json:"source"`
+	IsPublic   bool      `json:"is_public"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -59,4 +60,15 @@ type TagsResponse struct {
 type PatchRecipeRequest struct {
 	TagString string  `json:"tagString"`
 	Source    *string `json:"source"`
+}
+
+type SetPublicRequest struct {
+	IsPublic bool `json:"is_public"`
+}
+
+type PublicRecipeResponse struct {
+	Recipe Recipe               `json:"recipe"`
+	Files  []File               `json:"files"`
+	Steps  []RecipeStepResponse `json:"steps"`
+	Tags   []string             `json:"tags"`
 }
