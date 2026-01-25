@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { Recipe } from './Recipe'
 import * as api from '../api'
 import type { PublicRecipeResponse } from '../types.gen'
+import { asEmail } from '../branded'
 
 vi.mock('../api', () => ({
   getPublicRecipe: vi.fn(),
@@ -11,6 +12,8 @@ vi.mock('../api', () => ({
     err instanceof Error ? err.message : fallback,
   ),
 }))
+
+const mockNavigate = vi.fn()
 
 const mockRecipe: PublicRecipeResponse = {
   recipe: {
@@ -53,7 +56,13 @@ describe('Recipe', () => {
   it('shows loading state initially', () => {
     vi.mocked(api.getPublicRecipe).mockImplementation(() => new Promise(() => {}))
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     expect(screen.getByText('Loading...')).toBeTruthy()
   })
@@ -61,7 +70,13 @@ describe('Recipe', () => {
   it('renders recipe name when loaded', async () => {
     vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 1 })
@@ -72,7 +87,13 @@ describe('Recipe', () => {
   it('renders tags when present', async () => {
     vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Tags: breakfast, quick')).toBeTruthy()
@@ -82,7 +103,13 @@ describe('Recipe', () => {
   it('renders source when present', async () => {
     vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Source: cookbook')).toBeTruthy()
@@ -92,7 +119,13 @@ describe('Recipe', () => {
   it('renders recipe steps', async () => {
     vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Mix ingredients together')).toBeTruthy()
@@ -102,7 +135,13 @@ describe('Recipe', () => {
   it('renders recipe images', async () => {
     vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const img = screen.getByAltText('Test Recipe page 1')
@@ -116,7 +155,13 @@ describe('Recipe', () => {
   it('shows error when recipe not found', async () => {
     vi.mocked(api.getPublicRecipe).mockRejectedValue(new Error('Recipe not found'))
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000002" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000002"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 1 })
@@ -128,7 +173,13 @@ describe('Recipe', () => {
   it('shows error when fetch fails', async () => {
     vi.mocked(api.getPublicRecipe).mockRejectedValue(new Error('Network error'))
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 1 })
@@ -142,7 +193,13 @@ describe('Recipe', () => {
       tags: [],
     })
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 1 })
@@ -158,7 +215,13 @@ describe('Recipe', () => {
       recipe: { ...mockRecipe.recipe, source: undefined },
     })
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 1 })
@@ -174,7 +237,13 @@ describe('Recipe', () => {
       files: [],
     })
 
-    render(<Recipe recipeId="00000000-0000-0000-0000-000000000001" />)
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
 
     await waitFor(() => {
       const heading = screen.getByRole('heading', { level: 1 })
@@ -182,5 +251,39 @@ describe('Recipe', () => {
     })
 
     expect(screen.queryByRole('heading', { name: 'Photos' })).toBeNull()
+  })
+
+  it('shows public header when not logged in', async () => {
+    vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
+
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={null}
+        onNavigate={mockNavigate}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Join Hungr')).toBeTruthy()
+    })
+  })
+
+  it('shows normal header when logged in', async () => {
+    vi.mocked(api.getPublicRecipe).mockResolvedValue(mockRecipe)
+
+    render(
+      <Recipe
+        recipeId="00000000-0000-0000-0000-000000000001"
+        email={asEmail('user@example.com')}
+        onNavigate={mockNavigate}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('user@example.com')).toBeTruthy()
+      expect(screen.getByText('Add Recipe')).toBeTruthy()
+      expect(screen.getByText('Browse')).toBeTruthy()
+    })
   })
 })
