@@ -49,6 +49,7 @@ var VolumeUnits = map[string]DerivedUnit{
 	//	"pt":     {ToBase: 473.176, Name: "pint", Abbrev: "pt", PluralName: "pints"},
 	"qt":  {ToBase: 946.353, Name: "quart", Abbrev: "qt", PluralName: "quarts"},
 	"gal": {ToBase: 3785.41, Name: "gallon", Abbrev: "gal", PluralName: "gallons"},
+	"can": {ToBase: 458, Name: "can", Abbrev: "can", PluralName: "cans"},
 
 	"drop":    {ToBase: 0.05, Name: "drop", Abbrev: "drop", PluralName: "drops", NoDisplay: true},
 	"smidgen": {ToBase: 0.115522, Name: "smidgen", Abbrev: "smidgen", PluralName: "smidgens", NoDisplay: true},
@@ -374,6 +375,7 @@ func ParseUnit(s string) (string, UnitCategory, error) {
 		"shots":                 "jigger",
 		"gills":                 "gill",
 		"australian tablespoon": "au_tbsp",
+		"cans":                  "can",
 	}
 
 	massAliases := map[string]string{
