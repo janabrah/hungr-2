@@ -13,8 +13,10 @@ import {
   RecipeMetaSection,
   RecipeStepsSection,
   RecipeAddPhotos,
+  RecipeShareSection,
   TagFilterSection,
 } from '../components/Browse'
+import { Loading } from '../components/Loading'
 import { getParams, setParams } from '../utils'
 import type { Page } from '../types'
 
@@ -85,7 +87,7 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
 
         <RecipeListSection>
           {loading ? (
-            <p>Loading...</p>
+            <Loading withContainer={false} />
           ) : (
             <RecipeSelect
               recipes={filteredRecipes}
@@ -115,6 +117,12 @@ export function Browse({ email, currentPage, onNavigate }: BrowseProps) {
             />
             <RecipeAddPhotos
               selectedRecipeId={selectedRecipe.uuid}
+              onError={setError}
+              refetch={refetch}
+            />
+            <RecipeShareSection
+              selectedRecipeId={selectedRecipe.uuid}
+              isPublic={selectedRecipe.is_public}
               onError={setError}
               refetch={refetch}
             />

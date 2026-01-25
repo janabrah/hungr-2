@@ -1,6 +1,5 @@
 import type { Email } from '../branded'
-
-type Page = 'home' | 'add' | 'browse' | 'friends'
+import type { Page } from '../types'
 
 type Props = {
   email: Email

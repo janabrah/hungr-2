@@ -73,7 +73,8 @@ export interface Recipe {
   user_uuid: string
   owner_email: string
   tag_string: string
-  source: string | null
+  source?: string
+  is_public: boolean
   created_at: string
 }
 export interface File {
@@ -100,12 +101,25 @@ export interface UploadResponse {
   recipe: Recipe
   tags: Tag[]
 }
+export interface FileUploadResponse {
+  success: boolean
+  files: File[]
+}
 export interface TagsResponse {
   tags: Tag[]
 }
 export interface PatchRecipeRequest {
   tagString: string
-  source?: string | null
+  source?: string
+}
+export interface SetPublicRequest {
+  is_public: boolean
+}
+export interface PublicRecipeResponse {
+  recipe: Recipe
+  files: File[]
+  steps: RecipeStepResponse[]
+  tags: string[]
 }
 
 //////////

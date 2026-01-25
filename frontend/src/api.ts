@@ -1,10 +1,18 @@
-import type { User, RecipesResponse, UploadResponse, RecipeStepsResponse, Tag } from './types.gen'
+import type {
+  User,
+  RecipesResponse,
+  UploadResponse,
+  RecipeStepsResponse,
+  Tag,
+  PublicRecipeResponse,
+} from './types.gen'
 import type { Email, UUID } from './branded'
 import type { FileUploadResponse } from './types'
 import {
   getErrorMessage,
   isConnectionsResponse,
   isFileUploadResponse,
+  isPublicRecipeResponse,
   isRecipeStepsResponse,
   isRecipesResponse,
   isTagsResponse,
@@ -341,6 +349,40 @@ export async function deleteConnection(
     const message = await getErrorFromResponse(
       response,
       `Failed to delete connection: ${response.status.toString()}`,
+    )
+    throw new Error(message)
+  }
+}
+
+export async function getPublicRecipe(recipeUUID: UUID): Promise<PublicRecipeResponse> {
+  const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}/public`)
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Recipe not found')
+    }
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to fetch recipe: ${response.status.toString()}`,
+    )
+    throw new Error(message)
+  }
+  const data = await readJson(response)
+  if (!isPublicRecipeResponse(data)) {
+    throw new Error('Unexpected public recipe response from server.')
+  }
+  return data
+}
+
+export async function setRecipePublic(recipeUUID: UUID, isPublic: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/recipes/${encodeURIComponent(recipeUUID)}/public`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_public: isPublic }),
+  })
+  if (!response.ok) {
+    const message = await getErrorFromResponse(
+      response,
+      `Failed to update recipe: ${response.status.toString()}`,
     )
     throw new Error(message)
   }
