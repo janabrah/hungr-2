@@ -1049,3 +1049,232 @@ func TestPatchRecipe_ClearTags(t *testing.T) {
 		t.Errorf("Expected empty tag_string, got %q", updatedRecipe.TagString)
 	}
 }
+
+// Public recipe tests
+
+func TestGetPublicRecipe_NotPublic(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create a recipe (not public by default)
+	recipe, err := storage.InsertRecipeByEmail("public-test-not-public", testEmail, nil)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	req := httptest.NewRequest("GET", "/api/recipes/"+recipe.UUID.String()+"/public", nil)
+	w := httptest.NewRecorder()
+
+	GetPublicRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Errorf("Expected status 404, got %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+}
+
+func TestGetPublicRecipe_IsPublic(t *testing.T) {
+	ensureTestUser(t)
+
+	// Create a recipe and make it public
+	recipe, err := storage.InsertRecipeByEmail("public-test-is-public", testEmail, nil)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	// Make it public
+	err = storage.SetRecipePublic(recipe.UUID, true)
+	if err != nil {
+		t.Fatalf("Failed to set recipe public: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/api/recipes/"+recipe.UUID.String()+"/public", nil)
+	w := httptest.NewRecorder()
+
+	GetPublicRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var response models.PublicRecipeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response.Recipe.UUID != recipe.UUID {
+		t.Errorf("Expected recipe UUID %s, got %s", recipe.UUID, response.Recipe.UUID)
+	}
+	if response.Recipe.Name != "public-test-is-public" {
+		t.Errorf("Expected recipe name 'public-test-is-public', got %q", response.Recipe.Name)
+	}
+}
+
+func TestGetPublicRecipe_NotFound(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/recipes/00000000-0000-0000-0000-000000000001/public", nil)
+	w := httptest.NewRecorder()
+
+	GetPublicRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestGetPublicRecipe_InvalidUUID(t *testing.T) {
+	req := httptest.NewRequest("GET", "/api/recipes/not-a-uuid/public", nil)
+	w := httptest.NewRecorder()
+
+	GetPublicRecipe(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestSetRecipePublic_MakePublic(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("set-public-test", testEmail, nil)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	body := `{"is_public": true}`
+	req := httptest.NewRequest("POST", "/api/recipes/"+recipe.UUID.String()+"/public", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	SetRecipePublic(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify recipe is now public
+	updatedRecipe, err := storage.GetRecipeByUUID(recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if !updatedRecipe.IsPublic {
+		t.Error("Expected recipe to be public")
+	}
+}
+
+func TestSetRecipePublic_MakePrivate(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("set-private-test", testEmail, nil)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	// First make it public
+	err = storage.SetRecipePublic(recipe.UUID, true)
+	if err != nil {
+		t.Fatalf("Failed to set recipe public: %v", err)
+	}
+
+	// Then make it private via the endpoint
+	body := `{"is_public": false}`
+	req := httptest.NewRequest("POST", "/api/recipes/"+recipe.UUID.String()+"/public", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	SetRecipePublic(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 200, got %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Verify recipe is now private
+	updatedRecipe, err := storage.GetRecipeByUUID(recipe.UUID)
+	if err != nil {
+		t.Fatalf("Failed to get updated recipe: %v", err)
+	}
+
+	if updatedRecipe.IsPublic {
+		t.Error("Expected recipe to be private")
+	}
+}
+
+func TestSetRecipePublic_NotFound(t *testing.T) {
+	body := `{"is_public": true}`
+	req := httptest.NewRequest("POST", "/api/recipes/00000000-0000-0000-0000-000000000001/public", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	SetRecipePublic(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestSetRecipePublic_InvalidUUID(t *testing.T) {
+	body := `{"is_public": true}`
+	req := httptest.NewRequest("POST", "/api/recipes/not-a-uuid/public", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	SetRecipePublic(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestSetRecipePublic_InvalidBody(t *testing.T) {
+	ensureTestUser(t)
+
+	recipe, err := storage.InsertRecipeByEmail("set-public-invalid-body", testEmail, nil)
+	if err != nil {
+		t.Fatalf("Failed to create test recipe: %v", err)
+	}
+	defer storage.DeleteRecipe(recipe.UUID)
+
+	body := `{invalid json`
+	req := httptest.NewRequest("POST", "/api/recipes/"+recipe.UUID.String()+"/public", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	SetRecipePublic(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", resp.StatusCode)
+	}
+}

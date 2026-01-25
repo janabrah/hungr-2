@@ -526,6 +526,144 @@ func UpdateRecipeSteps(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]bool{"success": true})
 }
 
+func GetPublicRecipe(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse recipe UUID from path: /api/recipes/{uuid}/public
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/api/recipes/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		respondWithError(w, http.StatusBadRequest, "recipe uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(parts[0])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid recipe uuid")
+		return
+	}
+
+	// Get the recipe
+	recipe, err := storage.GetRecipeByUUID(recipeUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "recipe not found")
+			return
+		}
+		logger.Error(ctx, "failed to get recipe", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe")
+		return
+	}
+
+	// Check if recipe is public
+	if !recipe.IsPublic {
+		respondWithError(w, http.StatusNotFound, "recipe not found")
+		return
+	}
+
+	// Get files
+	files, err := storage.GetFilesByRecipeUUIDs([]uuid.UUID{recipeUUID})
+	if err != nil {
+		logger.Error(ctx, "failed to get files", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe files")
+		return
+	}
+
+	// Get steps with ingredients
+	stepsWithIngredients, err := storage.GetRecipeStepsWithIngredients(recipeUUID)
+	if err != nil {
+		logger.Error(ctx, "failed to get recipe steps", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe steps")
+		return
+	}
+
+	// Get tags
+	tags, err := storage.GetTagsByRecipeUUID(recipeUUID)
+	if err != nil {
+		logger.Error(ctx, "failed to get recipe tags", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe tags")
+		return
+	}
+
+	tagNames := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		tagNames = append(tagNames, tag.Name)
+	}
+
+	// Build steps response
+	steps := make([]models.RecipeStepResponse, len(stepsWithIngredients))
+	for i, step := range stepsWithIngredients {
+		ingredients := make([]string, len(step.Ingredients))
+		for j, ing := range step.Ingredients {
+			category := units.GetCategoryForIngredientUnit(ing.IngredientType)
+			formatted := units.FormatBest(ing.Quantity, category)
+			ingredients[j] = fmt.Sprintf("%s %s", formatted, ing.IngredientName)
+		}
+		steps[i] = models.RecipeStepResponse{
+			Instruction: step.Instructions,
+			Ingredients: ingredients,
+		}
+	}
+
+	response := models.PublicRecipeResponse{
+		Recipe: *recipe,
+		Files:  files,
+		Steps:  steps,
+		Tags:   tagNames,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func SetRecipePublic(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Parse recipe UUID from path: /api/recipes/{uuid}/public
+	path := r.URL.Path
+	parts := strings.Split(strings.TrimPrefix(path, "/api/recipes/"), "/")
+	if len(parts) < 1 || parts[0] == "" {
+		respondWithError(w, http.StatusBadRequest, "recipe uuid is required")
+		return
+	}
+
+	recipeUUID, err := uuid.FromString(parts[0])
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid recipe uuid")
+		return
+	}
+
+	// Check if recipe exists
+	_, err = storage.GetRecipeByUUID(recipeUUID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			respondWithError(w, http.StatusNotFound, "recipe not found")
+			return
+		}
+		logger.Error(ctx, "failed to get recipe", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to get recipe")
+		return
+	}
+
+	// Parse request body
+	var request models.SetPublicRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Update the recipe
+	if err := storage.SetRecipePublic(recipeUUID, request.IsPublic); err != nil {
+		logger.Error(ctx, "failed to set recipe public", err, "recipe_uuid", recipeUUID)
+		respondWithError(w, http.StatusInternalServerError, "failed to update recipe")
+		return
+	}
+
+	logger.Info(ctx, "recipe public status updated", "recipe_uuid", recipeUUID, "is_public", request.IsPublic)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+}
+
 func PatchRecipe(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
