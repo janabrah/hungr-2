@@ -1,5 +1,6 @@
 import type {
   ConnectionsResponse,
+  PublicRecipeResponse,
   RecipesResponse,
   RecipeStepsResponse,
   Tag,
@@ -31,6 +32,7 @@ export const isRecipe = (value: unknown): value is RecipesResponse['recipeData']
   isString(value['owner_email']) &&
   isString(value['tag_string']) &&
   isNullableString(value['source']) &&
+  isBoolean(value['is_public']) &&
   isString(value['created_at'])
 
 export const isFile = (value: unknown): value is RecipesResponse['fileData'][number] =>
@@ -93,6 +95,15 @@ export const isConnectionsResponse = (value: unknown): value is ConnectionsRespo
   isBoolean(value['success']) &&
   Array.isArray(value['connections']) &&
   value['connections'].every(isUser)
+
+export const isPublicRecipeResponse = (value: unknown): value is PublicRecipeResponse =>
+  isRecord(value) &&
+  isRecipe(value['recipe']) &&
+  Array.isArray(value['files']) &&
+  value['files'].every(isFile) &&
+  Array.isArray(value['steps']) &&
+  value['steps'].every(isRecipeStepResponse) &&
+  isStringArray(value['tags'])
 
 export const getErrorMessage = (value: unknown): string | undefined => {
   if (!isRecord(value)) {

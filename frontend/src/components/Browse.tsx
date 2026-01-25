@@ -11,6 +11,7 @@ import {
   addRecipeFiles,
   getFileURL,
   patchRecipe,
+  setRecipePublic,
   updateRecipeSteps,
   getFriendlyErrorMessage,
 } from '../api'
@@ -113,7 +114,7 @@ export function TagsDisplay({ tags, onEdit }: TagsDisplayProps) {
 }
 
 type SourceDisplayProps = {
-  source: string | null
+  source: string | null | undefined
   onEdit: () => void
 }
 
@@ -227,7 +228,7 @@ export function RecipeImages({ name, files }: RecipeImagesProps) {
 type RecipeMetaSectionProps = {
   selectedRecipeId: string
   tags: string
-  source: string | null
+  source: string | null | undefined
   onError: (message: string) => void
   refetch: () => void
 }
@@ -421,5 +422,75 @@ export function RecipeAddPhotos({ selectedRecipeId, onError, refetch }: RecipeAd
         pasteHint="Or paste images here"
       />
     </div>
+  )
+}
+
+type RecipeShareSectionProps = {
+  selectedRecipeId: string
+  isPublic: boolean
+  onError: (message: string) => void
+  refetch: () => void
+}
+
+export function RecipeShareSection({
+  selectedRecipeId,
+  isPublic,
+  onError,
+  refetch,
+}: RecipeShareSectionProps) {
+  const [updating, setUpdating] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const shareUrl = `${window.location.origin}/recipe/${selectedRecipeId}`
+
+  const handleTogglePublic = async () => {
+    setUpdating(true)
+    try {
+      await setRecipePublic(asUUID(selectedRecipeId), !isPublic)
+      refetch()
+    } catch (err: unknown) {
+      onError(getFriendlyErrorMessage(err, 'Failed to update sharing'))
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      setTimeout(() => {
+        setCopied(false)
+      }, 2000)
+    } catch {
+      onError('Failed to copy link')
+    }
+  }
+
+  const smallBtnStyle = { fontSize: '0.875rem', padding: '0.375rem 0.75rem' }
+
+  return (
+    <InlineRow style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+      <span style={{ fontWeight: 500 }}>Share:</span>
+      {isPublic ? (
+        <>
+          <Button
+            variant="secondary"
+            onClick={() => void handleTogglePublic()}
+            disabled={updating}
+            style={smallBtnStyle}
+          >
+            {updating ? 'Updating...' : 'Make Private'}
+          </Button>
+          <Button onClick={() => void handleCopyLink()} style={smallBtnStyle}>
+            {copied ? 'Copied!' : 'Copy Link'}
+          </Button>
+        </>
+      ) : (
+        <Button onClick={() => void handleTogglePublic()} disabled={updating} style={smallBtnStyle}>
+          {updating ? 'Updating...' : 'Make Public'}
+        </Button>
+      )}
+    </InlineRow>
   )
 }

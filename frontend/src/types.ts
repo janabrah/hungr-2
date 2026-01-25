@@ -1,4 +1,4 @@
-export type Page = 'home' | 'add' | 'browse' | 'friends'
+export type Page = 'home' | 'add' | 'browse' | 'friends' | 'recipe'
 
 import type { File } from './types.gen'
 
