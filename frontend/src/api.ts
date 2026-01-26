@@ -22,6 +22,13 @@ import {
 
 export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
 
+// Fire-and-forget ping to wake up a sleeping server (e.g., Render free tier)
+export function pingServer(): void {
+  void fetch(`${API_BASE}/health`).catch(() => {
+    // Ignore errors - this is just a wake-up call
+  })
+}
+
 const FETCH_FAILURE_MESSAGE =
   'Unable to reach the API. Check that the backend is running and VITE_API_BASE is correct.'
 

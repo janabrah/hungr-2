@@ -9,6 +9,7 @@ import { getEmail } from './auth'
 import type { Email } from './branded'
 import type { Page } from './types'
 import { usePopState } from './hooks/usePopState'
+import { useWakeServer } from './hooks/useWakeServer'
 
 function getPageFromPath(): Page {
   const path = window.location.pathname
@@ -33,6 +34,8 @@ function App() {
   const [page, setPage] = useState<Page>(getPageFromPath)
   const [email, setEmailState] = useState<Email | null>(getEmail)
   const [recipeId, setRecipeId] = useState<string | null>(getRecipeIdFromPath)
+
+  useWakeServer()
 
   usePopState(() => {
     setPage(getPageFromPath())
