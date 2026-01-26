@@ -25,7 +25,8 @@ type DerivedUnit struct {
 	Abbrev       string
 	PluralName   string
 	PluralAbbrev string
-	NoDisplay    bool // If true, unit can be parsed but won't be chosen for display
+	NoDisplay    bool   // If true, unit can be parsed but won't be chosen for display
+	ParentUnit   string // For fractional units, the parent unit (e.g., "tsp" for "half_tsp")
 }
 
 // VolumeUnits (base: ml)
@@ -34,35 +35,35 @@ var VolumeUnits = map[string]DerivedUnit{
 	"l":  {ToBase: 1000, Name: "liter", Abbrev: "l", PluralName: "liters"},
 
 	"tsp":        {ToBase: 4.92892, Name: "teaspoon", Abbrev: "tsp", PluralName: "teaspoons"},
-	"half_tsp":   {ToBase: 2.46446, Name: "half teaspoon", Abbrev: "½ tsp", PluralName: "half teaspoons"},
-	"third_tsp":  {ToBase: 1.64297, Name: "third teaspoon", Abbrev: "⅓ tsp", PluralName: "third teaspoons"},
-	"qtr_tsp":    {ToBase: 1.23223, Name: "quarter teaspoon", Abbrev: "¼ tsp", PluralName: "quarter teaspoons"},
-	"eighth_tsp": {ToBase: 0.616115, Name: "eighth teaspoon", Abbrev: "⅛ tsp", PluralName: "eighth teaspoons"},
+	"half_tsp":   {ToBase: 2.46446, Name: "half teaspoon", Abbrev: "½ tsp", PluralName: "half teaspoons", ParentUnit: "tsp"},
+	"third_tsp":  {ToBase: 1.64297, Name: "third teaspoon", Abbrev: "⅓ tsp", PluralName: "third teaspoons", ParentUnit: "tsp"},
+	"qtr_tsp":    {ToBase: 1.23223, Name: "quarter teaspoon", Abbrev: "¼ tsp", PluralName: "quarter teaspoons", ParentUnit: "tsp"},
+	"eighth_tsp": {ToBase: 0.616115, Name: "eighth teaspoon", Abbrev: "⅛ tsp", PluralName: "eighth teaspoons", ParentUnit: "tsp"},
 	"tbsp":       {ToBase: 14.7868, Name: "tablespoon", Abbrev: "tbsp", PluralName: "tablespoons"},
 	"fl_oz":      {ToBase: 29.5735, Name: "fluid ounce", Abbrev: "fl oz", PluralName: "fluid ounces", NoDisplay: true},
 	"jigger":     {ToBase: 44.3603, Name: "jigger", Abbrev: "jigger", PluralName: "jiggers", NoDisplay: true},
 	"cup":        {ToBase: 236.588, Name: "cup", Abbrev: "cup", PluralName: "cups"},
-	"half_cup":   {ToBase: 118.294, Name: "half cup", Abbrev: "½ cup", PluralName: "half cups"},
+	"half_cup":   {ToBase: 118.294, Name: "half cup", Abbrev: "½ cup", PluralName: "half cups", ParentUnit: "cup"},
 	"gill":       {ToBase: 118.294, Name: "gill", Abbrev: "gill", PluralName: "gills", NoDisplay: true},
-	"third_cup":  {ToBase: 78.8627, Name: "third cup", Abbrev: "⅓ cup", PluralName: "third cups"},
-	"qtr_cup":    {ToBase: 59.147, Name: "quarter cup", Abbrev: "¼ cup", PluralName: "quarter cups"},
+	"third_cup":  {ToBase: 78.8627, Name: "third cup", Abbrev: "⅓ cup", PluralName: "third cups", ParentUnit: "cup"},
+	"qtr_cup":    {ToBase: 59.147, Name: "quarter cup", Abbrev: "¼ cup", PluralName: "quarter cups", ParentUnit: "cup"},
 	//	"pt":     {ToBase: 473.176, Name: "pint", Abbrev: "pt", PluralName: "pints"},
 	"qt":  {ToBase: 946.353, Name: "quart", Abbrev: "qt", PluralName: "quarts"},
 	"gal": {ToBase: 3785.41, Name: "gallon", Abbrev: "gal", PluralName: "gallons"},
 	"can": {ToBase: 458, Name: "can", Abbrev: "can", PluralName: "cans"},
 
-	"drop":    {ToBase: 0.05, Name: "drop", Abbrev: "drop", PluralName: "drops", NoDisplay: true},
+	// "drop":    {ToBase: 0.05, Name: "drop", Abbrev: "drop", PluralName: "drops", NoDisplay: true},
 	"smidgen": {ToBase: 0.115522, Name: "smidgen", Abbrev: "smidgen", PluralName: "smidgens", NoDisplay: true},
 	"pinch":   {ToBase: 0.231043, Name: "pinch", Abbrev: "pinch", PluralName: "pinches"},
 	"dash":    {ToBase: 0.462086, Name: "dash", Abbrev: "dash", PluralName: "dashes"},
 
-	"imp_tsp":   {ToBase: 5.91939, Name: "imperial teaspoon", Abbrev: "imp tsp", PluralName: "imperial teaspoons"},
-	"imp_tbsp":  {ToBase: 17.7582, Name: "imperial tablespoon", Abbrev: "imp tbsp", PluralName: "imperial tablespoons"},
-	"imp_fl_oz": {ToBase: 28.4131, Name: "imperial fluid ounce", Abbrev: "imp fl oz", PluralName: "imperial fluid ounces"},
-	"imp_cup":   {ToBase: 284.131, Name: "imperial cup", Abbrev: "imp cup", PluralName: "imperial cups"},
-	"imp_pt":    {ToBase: 568.261, Name: "imperial pint", Abbrev: "imp pt", PluralName: "imperial pints"},
-	"imp_qt":    {ToBase: 1136.52, Name: "imperial quart", Abbrev: "imp qt", PluralName: "imperial quarts"},
-	"imp_gal":   {ToBase: 4546.09, Name: "imperial gallon", Abbrev: "imp gal", PluralName: "imperial gallons"},
+	// "imp_tsp":   {ToBase: 5.91939, Name: "imperial teaspoon", Abbrev: "imp tsp", PluralName: "imperial teaspoons"},
+	// "imp_tbsp":  {ToBase: 17.7582, Name: "imperial tablespoon", Abbrev: "imp tbsp", PluralName: "imperial tablespoons"},
+	// "imp_fl_oz": {ToBase: 28.4131, Name: "imperial fluid ounce", Abbrev: "imp fl oz", PluralName: "imperial fluid ounces"},
+	// "imp_cup":   {ToBase: 284.131, Name: "imperial cup", Abbrev: "imp cup", PluralName: "imperial cups"},
+	// "imp_pt":    {ToBase: 568.261, Name: "imperial pint", Abbrev: "imp pt", PluralName: "imperial pints"},
+	// "imp_qt":    {ToBase: 1136.52, Name: "imperial quart", Abbrev: "imp qt", PluralName: "imperial quarts"},
+	// "imp_gal":   {ToBase: 4546.09, Name: "imperial gallon", Abbrev: "imp gal", PluralName: "imperial gallons"},
 }
 
 // MassUnits (base: mg)
@@ -72,14 +73,14 @@ var MassUnits = map[string]DerivedUnit{
 	"g":   {ToBase: 1000, Name: "gram", Abbrev: "g", PluralName: "grams"},
 	"kg":  {ToBase: 1000000, Name: "kilogram", Abbrev: "kg", PluralName: "kilograms"},
 
-	"gr":    {ToBase: 64.79891, Name: "grain", Abbrev: "gr", PluralName: "grains"},
-	"dr":    {ToBase: 1771.8452, Name: "dram", Abbrev: "dr", PluralName: "drams"},
-	"oz":    {ToBase: 28349.5, Name: "ounce", Abbrev: "oz", PluralName: "ounces"},
-	"lb":    {ToBase: 453592, Name: "pound", Abbrev: "lb", PluralName: "pounds"},
-	"stone": {ToBase: 6350293, Name: "stone", Abbrev: "st", PluralName: "stone"},
+	// "gr":    {ToBase: 64.79891, Name: "grain", Abbrev: "gr", PluralName: "grains"},
+	// "dr":    {ToBase: 1771.8452, Name: "dram", Abbrev: "dr", PluralName: "drams"},
+	"oz": {ToBase: 28349.5, Name: "ounce", Abbrev: "oz", PluralName: "ounces"},
+	"lb": {ToBase: 453592, Name: "pound", Abbrev: "lb", PluralName: "pounds"},
+	//"stone": {ToBase: 6350293, Name: "stone", Abbrev: "st", PluralName: "stone"},
 
-	"oz_t": {ToBase: 31103.5, Name: "troy ounce", Abbrev: "oz t", PluralName: "troy ounces"},
-	"dwt":  {ToBase: 1555.17, Name: "pennyweight", Abbrev: "dwt", PluralName: "pennyweights"},
+	//"oz_t": {ToBase: 31103.5, Name: "troy ounce", Abbrev: "oz t", PluralName: "troy ounces"},
+	//"dwt":  {ToBase: 1555.17, Name: "pennyweight", Abbrev: "dwt", PluralName: "pennyweights"},
 }
 
 type Quantity struct {
@@ -191,6 +192,10 @@ func FindBestIntegerUnit(baseValue float64, category UnitCategory) Quantity {
 	return FindBestIntegerUnitWithTolerance(baseValue, category, IntegerTolerance)
 }
 
+// MaxFractionalUnitQuantity is the maximum quantity for which fractional units
+// (like ½ tsp, ¼ cup) are used. Above this, we display as a decimal of the parent unit.
+const MaxFractionalUnitQuantity = 2
+
 func FindBestIntegerUnitWithTolerance(baseValue float64, category UnitCategory, tolerance float64) Quantity {
 	if category == CategoryCount {
 		return Quantity{Value: baseValue, Unit: "count", Category: CategoryCount}
@@ -220,8 +225,22 @@ func FindBestIntegerUnitWithTolerance(baseValue float64, category UnitCategory, 
 		}
 		converted := baseValue / unit.ToBase
 		if converted >= 1 && isNearInteger(converted, tolerance) {
+			roundedValue := math.Round(converted)
+
+			// For fractional units (those with a ParentUnit), if the quantity is too large,
+			// display as a decimal of the parent unit instead
+			if unit.ParentUnit != "" && roundedValue > MaxFractionalUnitQuantity {
+				parentUnit := unitMap[unit.ParentUnit]
+				parentValue := baseValue / parentUnit.ToBase
+				return Quantity{
+					Value:    parentValue,
+					Unit:     unit.ParentUnit,
+					Category: category,
+				}
+			}
+
 			return Quantity{
-				Value:    math.Round(converted),
+				Value:    roundedValue,
 				Unit:     unitKey,
 				Category: category,
 			}

@@ -186,13 +186,14 @@ func TestParseQuantity_Errors(t *testing.T) {
 func TestFindBestIntegerUnit_FractionalUnits(t *testing.T) {
 	// Regression test: fractional units should display as fractional units,
 	// not convert to smaller units (e.g., 1/2 tsp was previously showing as 49 drops)
+	// But when quantity > 2, should display as decimal of parent unit instead
 	tests := []struct {
 		name         string
 		baseML       float64
 		expectedUnit string
 		expectedVal  float64
 	}{
-		// Fractional teaspoons
+		// Fractional teaspoons - quantity <= 2 uses fractional unit
 		{"half teaspoon", 2.46446, "half_tsp", 1},
 		{"third teaspoon", 1.64297, "third_tsp", 1},
 		{"quarter teaspoon", 1.23223, "qtr_tsp", 1},
@@ -200,15 +201,20 @@ func TestFindBestIntegerUnit_FractionalUnits(t *testing.T) {
 		{"two half teaspoons", 4.92892, "tsp", 1},
 		{"two third teaspoons", 3.28594, "third_tsp", 2},
 		{"two quarter teaspoons", 2.46446, "half_tsp", 1},
-		{"three eighth teaspoons", 1.848345, "eighth_tsp", 3},
-		// Fractional cups
+		{"two eighth teaspoons (= 1/4 tsp)", 1.23223, "qtr_tsp", 1},
+		// quantity > 2 should use decimal of parent unit
+		{"three eighth teaspoons (0.375 tsp)", 1.848345, "tsp", 0.375},
+		{"1.5 tsp", 7.39338, "tsp", 1.5},
+		// Fractional cups - quantity <= 2 uses fractional unit
 		{"half cup", 118.294, "half_cup", 1},
 		{"third cup", 78.8627, "third_cup", 1},
 		{"quarter cup", 59.147, "qtr_cup", 1},
 		{"two half cups", 236.588, "cup", 1},
 		{"two third cups", 157.7254, "third_cup", 2},
 		{"two quarter cups", 118.294, "half_cup", 1},
-		{"three quarter cups", 177.441, "qtr_cup", 3},
+		// quantity > 2 should use decimal of parent unit
+		{"three quarter cups (0.75 cup)", 177.441, "cup", 0.75},
+		{"1.5 cups", 354.882, "cup", 1.5},
 	}
 
 	for _, tt := range tests {
@@ -217,7 +223,8 @@ func TestFindBestIntegerUnit_FractionalUnits(t *testing.T) {
 			if q.Unit != tt.expectedUnit {
 				t.Errorf("Unit: got %q, want %q", q.Unit, tt.expectedUnit)
 			}
-			if q.Value != tt.expectedVal {
+			delta := 0.0001
+			if q.Value < tt.expectedVal-delta || q.Value > tt.expectedVal+delta {
 				t.Errorf("Value: got %v, want %v", q.Value, tt.expectedVal)
 			}
 		})
