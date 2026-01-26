@@ -296,3 +296,39 @@ func TestRoundTripIngredientParsing(t *testing.T) {
 		})
 	}
 }
+
+func TestFormat_FractionalUnits(t *testing.T) {
+	// Test that fractional units hide the "1" when quantity is 1
+	tests := []struct {
+		name     string
+		quantity Quantity
+		expected string
+	}{
+		// Fractional units with quantity 1 should hide the "1"
+		{"1 half tsp", Quantity{Value: 1, Unit: "half_tsp", Category: CategoryVolume}, "½ tsp"},
+		{"1 third tsp", Quantity{Value: 1, Unit: "third_tsp", Category: CategoryVolume}, "⅓ tsp"},
+		{"1 quarter tsp", Quantity{Value: 1, Unit: "qtr_tsp", Category: CategoryVolume}, "¼ tsp"},
+		{"1 half cup", Quantity{Value: 1, Unit: "half_cup", Category: CategoryVolume}, "½ cup"},
+		{"1 third cup", Quantity{Value: 1, Unit: "third_cup", Category: CategoryVolume}, "⅓ cup"},
+		{"1 quarter cup", Quantity{Value: 1, Unit: "qtr_cup", Category: CategoryVolume}, "¼ cup"},
+		// Fractional units with quantity 2 should show the number
+		{"2 half tsp", Quantity{Value: 2, Unit: "half_tsp", Category: CategoryVolume}, "2 ½ tsp"},
+		{"2 third cup", Quantity{Value: 2, Unit: "third_cup", Category: CategoryVolume}, "2 ⅓ cup"},
+		// Non-fractional units should always show the number
+		{"1 tsp", Quantity{Value: 1, Unit: "tsp", Category: CategoryVolume}, "1 tsp"},
+		{"1 cup", Quantity{Value: 1, Unit: "cup", Category: CategoryVolume}, "1 cup"},
+		{"2 tsp", Quantity{Value: 2, Unit: "tsp", Category: CategoryVolume}, "2 tsp"},
+		// Decimal values in parent units
+		{"1.5 tsp", Quantity{Value: 1.5, Unit: "tsp", Category: CategoryVolume}, "1.50 tsp"},
+		{"0.75 cup", Quantity{Value: 0.75, Unit: "cup", Category: CategoryVolume}, "0.75 cup"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Format(tt.quantity)
+			if result != tt.expected {
+				t.Errorf("Format(%v): got %q, want %q", tt.quantity, result, tt.expected)
+			}
+		})
+	}
+}

@@ -287,6 +287,12 @@ func Format(q Quantity) string {
 		abbrev = unit.PluralAbbrev
 	}
 
+	// For fractional units (those with a ParentUnit), hide the "1" when quantity is 1
+	// e.g., "½ tsp" instead of "1 ½ tsp"
+	if q.Value == 1 && unit.ParentUnit != "" {
+		return abbrev
+	}
+
 	return fmt.Sprintf("%s %s", formatted, abbrev)
 }
 
